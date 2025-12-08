@@ -1,0 +1,266 @@
+{
+   "about": {
+      "message": "About"
+   },
+   "ai": {
+      "message": "AI"
+   },
+   "applyFilter": {
+      "message": "Filter"
+   },
+   "author": {
+      "message": "Author"
+   },
+   "autoSaveConversations": {
+      "message": "Auto-save Conversations"
+   },
+   "autoSaveDescription": {
+      "message": "Automatically save conversation records on supported AI chat pages"
+   },
+   "autoSaving": {
+      "message": "Auto-saving"
+   },
+   "basicSettings": {
+      "message": "Basic Settings"
+   },
+   "calculating": {
+      "message": "Calculating..."
+   },
+   "cancel": {
+      "message": "Cancel"
+   },
+   "cancelButton": {
+      "message": "Cancel"
+   },
+   "cancelMultiSelectMode": {
+      "message": "Cancel multi-select mode"
+   },
+   "clearData": {
+      "message": "Clear Data"
+   },
+   "clearDataWarning": {
+      "message": "This operation will permanently delete all saved conversation records and cannot be undone."
+   },
+   "clearDate": {
+      "message": "Clear Date"
+   },
+   "clearFailed": {
+      "message": "Clear failed"
+   },
+   "clearFilter": {
+      "message": "Clear Filter"
+   },
+   "clearSearch": {
+      "message": "Clear search"
+   },
+   "clearSuccess": {
+      "message": "Clear successful"
+   },
+   "clearing": {
+      "message": "Clearing..."
+   },
+   "clickToOpenManager": {
+      "message": "Click to open memory manager, drag to adjust position"
+   },
+   "confirmClear": {
+      "message": "Confirm Clear"
+   },
+   "confirmClearAllData": {
+      "message": "Confirm clear all data?"
+   },
+   "confirmDelete": {
+      "message": "Confirm Delete"
+   },
+   "contactUs": {
+      "message": "Contact Us"
+   },
+   "copyConversation": {
+      "message": "Copy Conversation"
+   },
+   "copySuccess": {
+      "message": "Copy successful"
+   },
+   "dateRange": {
+      "message": "Date Range"
+   },
+   "delete": {
+      "message": "Delete"
+   },
+   "deleteConfirmMessage": {
+      "message": "Are you sure you want to delete this conversation memory? This action cannot be undone."
+   },
+   "editConversationTitle": {
+      "message": "Edit Conversation Title"
+   },
+   "endDate": {
+      "message": "End Date"
+   },
+   "export": {
+      "message": "Export"
+   },
+   "exportData": {
+      "message": "Export Data"
+   },
+   "exportFailed": {
+      "message": "Export failed"
+   },
+   "exportFilterResults": {
+      "message": "Export filter results"
+   },
+   "exportMerged": {
+      "message": "Export Merged"
+   },
+   "exportMergedDocument": {
+      "message": "Merge into One Document"
+   },
+   "exportMultipleFiles": {
+      "message": "Export Multiple Files"
+   },
+   "exportSelected": {
+      "message": "Export selected ({count})"
+   },
+   "exportSelectedTitle": {
+      "message": "Export {count} selected conversations"
+   },
+   "exportSeparate": {
+      "message": "Export Separately"
+   },
+   "exportSuccess": {
+      "message": "Export successful"
+   },
+   "exporting": {
+      "message": "Exporting..."
+   },
+   "extensionContextInvalid": {
+      "message": "Extension context is invalid, please refresh the page"
+   },
+   "extensionDescription": {
+      "message": "Automatically save AI chat history from ChatGPT, Gemini, Claude, and more AI chat platforms"
+   },
+   "extensionName": {
+      "message": "Chat Memo | Auto-save AI Chats from ChatGPT, Gemini, Claude +"
+   },
+   "filter": {
+      "message": "Filter"
+   },
+   "foundItems": {
+      "message": "Found {count} items"
+   },
+   "hoursAgo": {
+      "message": " hours ago"
+   },
+   "inputNewTitle": {
+      "message": "Enter new title"
+   },
+   "justNow": {
+      "message": "Just now"
+   },
+   "lastMonth": {
+      "message": "Last Month"
+   },
+   "lastWeek": {
+      "message": "Last Week"
+   },
+   "loadingMemories": {
+      "message": "Loading memories..."
+   },
+   "manualSave": {
+      "message": "Manual Save"
+   },
+   "memories": {
+      "message": "Memories"
+   },
+   "minutesAgo": {
+      "message": " minutes ago"
+   },
+   "moreActions": {
+      "message": "More Actions"
+   },
+   "multiSelect": {
+      "message": "Multi-select"
+   },
+   "multiSelectMode": {
+      "message": "Multi-select mode"
+   },
+   "noContent": {
+      "message": "No Content"
+   },
+   "noMemoriesSaved": {
+      "message": "No memories saved yet"
+   },
+   "noTitle": {
+      "message": "Untitled Conversation"
+   },
+   "openOriginalPage": {
+      "message": "Open Original Page"
+   },
+   "platformSource": {
+      "message": "Platform Source"
+   },
+   "productWebsite": {
+      "message": "Official Site"
+   },
+   "refreshPageAfterClear": {
+      "message": "Please refresh the pages after clearing to ensure data synchronization."
+   },
+   "remove": {
+      "message": "Remove"
+   },
+   "save": {
+      "message": "Save"
+   },
+   "saveSuccess": {
+      "message": "Save successful"
+   },
+   "saving": {
+      "message": "Saving..."
+   },
+   "searchNoResults": {
+      "message": "No matching conversations found"
+   },
+   "searchNoResultsHint": {
+      "message": "Try using different keywords"
+   },
+   "searchPlaceholder": {
+      "message": "Search titles and content..."
+   },
+   "selectPlatforms": {
+      "message": "Click to select platforms"
+   },
+   "settings": {
+      "message": "Settings"
+   },
+   "sidebarOpenRequested": {
+      "message": "Sidebar open request sent"
+   },
+   "startDate": {
+      "message": "Start Date"
+   },
+   "storageManagement": {
+      "message": "Storage Management"
+   },
+   "supportedPlatforms": {
+      "message": "Supported Platforms"
+   },
+   "thinkingProcess": {
+      "message": "Thinking Process"
+   },
+   "todayNew": {
+      "message": "Today's New"
+   },
+   "totalConversations": {
+      "message": "Total Conversations"
+   },
+   "usedStorage": {
+      "message": "Used Storage"
+   },
+   "user": {
+      "message": "User"
+   },
+   "version": {
+      "message": "Version"
+   },
+   "visitSupportedPages": {
+      "message": "Visit supported AI chat pages to start recording conversations"
+   }
+}

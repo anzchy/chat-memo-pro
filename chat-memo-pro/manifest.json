@@ -1,0 +1,57 @@
+{
+   "action": {
+      "default_icon": {
+         "128": "icons/logo_128.png",
+         "16": "icons/logo_16.png",
+         "48": "icons/logo_48.png"
+      }
+   },
+   "author": "一泽Eze",
+   "background": {
+      "service_worker": "js/background.js"
+   },
+   "content_scripts": [ {
+      "css": [ "css/content.css" ],
+      "js": [ "js/content_common.js" ],
+      "matches": [ "\u003Call_urls>" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/deepseek.js" ],
+      "matches": [ "https://chat.deepseek.com/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/chatgpt.js" ],
+      "matches": [ "https://chatgpt.com/*", "https://chat.openai.com/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/gemini.js" ],
+      "matches": [ "https://gemini.google.com/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/yuanbao.js" ],
+      "matches": [ "https://yuanbao.tencent.com/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/doubao.js" ],
+      "matches": [ "https://www.doubao.com/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/claude.js" ],
+      "matches": [ "https://claude.ai/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/kimi.js" ],
+      "matches": [ "https://kimi.moonshot.cn/*", "https://*.kimi.com/*" ]
+   } ],
+   "default_locale": "en",
+   "description": "__MSG_extensionDescription__",
+   "host_permissions": [ "\u003Call_urls>" ],
+   "icons": {
+      "128": "icons/logo_128.png",
+      "16": "icons/logo_16.png",
+      "48": "icons/logo_48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAre7UX2HP+oJ0kXd0OePDzr+Kr9vxCCis20eJkDFrtL+3RhQRnByyxgYUkLKbYxCB4n3QJhfhJf0BLYNnqmzeVrIVFy3RqgD8MqmjsE00N3VxlMUWlq+p/ksUelJWa2YgnoKwG+5cGtRdA/5PPVuUku/+lLq6ztKhMgHlveFLFkEX5CMBLktwcr+51qZRet4mu2V4zqTZUvHP1Vk0l+ypviM60hPbBh06YreyV8rIjtwJFYqLgwwLKpbe70G44+PRW6XBpMn4Xgz4ZBhQ6HzAP3hAe7iEvnFIebBN/O5indWxkv9zABJf+hHi+nqbS+rbfZrR7BQXCTlstK48uuhZGwIDAQAB",
+   "manifest_version": 3,
+   "name": "__MSG_extensionName__",
+   "permissions": [ "storage", "tabs", "downloads" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1.1.2",
+   "web_accessible_resources": [ {
+      "matches": [ "\u003Call_urls>" ],
+      "resources": [ "lib/*", "icons/*", "html/popup.html", "css/*", "js/popup.js" ]
+   } ]
+}

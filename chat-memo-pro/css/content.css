@@ -1,0 +1,246 @@
+/* 悬浮标签样式 */
+.keep-ai-memory-float {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap; /* 防止flex项目换行 */
+  white-space: nowrap; /* 防止文本换行 */
+  padding: 10px 14px; /* 统一的固定padding */
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; /* 统一字体 */
+  font-size: 14px;
+  line-height: 1.4; /* 统一行高 */
+  font-weight: 400; /* 统一字重 */
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent; /* 状态指示条 */
+  animation: fadeIn 0.3s ease; /* 始终保留淡入动画 */
+  cursor: grab; /* 默认显示可拖动光标 */
+  min-height: 20px; /* 最小高度确保一致性 */
+}
+
+/* 贴边半隐藏状态 - 右边 */
+.keep-ai-memory-float.edge-docked {
+  transform: translateX(calc(100% - 40px)); /* 只露出左侧40px */
+  transition: transform 0.3s ease;
+  border-radius: 8px 0 0 8px; /* 右侧圆角移除 */
+  /* 边框颜色继承状态颜色，不需要固定颜色 */
+}
+
+/* 贴边半隐藏状态 - 左边 */
+.keep-ai-memory-float.edge-docked.left {
+  transform: translateX(calc(-100% + 40px)); /* 只露出右侧40px */
+  border-radius: 0 8px 8px 0; /* 左侧圆角移除 */
+  border-left: 3px solid transparent; /* 重置左侧边框 */
+  flex-direction: row-reverse; /* 逆向排列，实现镜像效果 */
+}
+
+/* 贴左边时的状态颜色 - 自动保存 */
+.keep-ai-memory-float.edge-docked.left.keep-ai-memory-auto-save {
+  border-right: 3px solid #16a34a; /* 绿色 */
+}
+
+/* 贴左边时的状态颜色 - 手动保存 */
+.keep-ai-memory-float.edge-docked.left.keep-ai-memory-manual-save {
+  border-right: 3px solid #f59e0b; /* 橙色 */
+}
+
+/* 贴左边时的状态颜色 - 保存成功 */
+.keep-ai-memory-float.edge-docked.left.keep-ai-memory-success {
+  border-right: 3px solid #16a34a; /* 绿色 */
+}
+
+/* 贴边半隐藏状态悬停时完全显示 */
+.keep-ai-memory-float.edge-docked:hover {
+  transform: translateX(0); /* 完全显示 */
+}
+
+/* 贴边半隐藏状态下的文字隐藏 */
+.keep-ai-memory-float.edge-docked .keep-ai-memory-status {
+  opacity: 0;
+  width: 0;
+  margin: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* 贴边半隐藏状态悬停时文字显示 */
+.keep-ai-memory-float.edge-docked:hover .keep-ai-memory-status {
+  opacity: 1;
+  width: auto;
+  margin-right: 8px;
+}
+
+/* 贴左边时文字的镜像间距 */
+.keep-ai-memory-float.edge-docked.left:hover .keep-ai-memory-status {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+/* 贴边半隐藏状态下的保存按钮隐藏 */
+.keep-ai-memory-float.edge-docked .keep-ai-memory-save {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* 贴边半隐藏状态悬停时保存按钮显示 */
+.keep-ai-memory-float.edge-docked:hover .keep-ai-memory-save {
+  opacity: 1;
+  width: auto;
+}
+
+/* 贴左边时图标的镜像间距 */
+.keep-ai-memory-float.edge-docked.left .keep-ai-memory-icon {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+/* 拖动时的样式 */
+.keep-ai-memory-float.dragging {
+  opacity: 0.8;
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  cursor: grabbing;
+  transition: none; /* 拖动时禁用过渡动画 */
+}
+
+.keep-ai-memory-float:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 悬浮标签图标样式 */
+.keep-ai-memory-icon {
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit; /* 继承父容器字体 */
+  font-size: 16px;
+  line-height: 1; /* 图标使用固定行高 */
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.keep-ai-memory-status {
+  font-family: inherit; /* 继承父容器字体 */
+  font-weight: 500;
+  font-size: inherit; /* 继承父容器字体大小 */
+  line-height: inherit; /* 继承父容器行高 */
+  color: #333;
+  margin-right: 8px;
+  transition: all 0.3s ease;
+  white-space: nowrap; /* 防止状态文本换行 */
+  overflow: hidden; /* 隐藏溢出内容 */
+  text-overflow: ellipsis; /* 用省略号显示溢出文本 */
+  flex-shrink: 0; /* 防止在flex容器中被压缩 */
+}
+
+.keep-ai-memory-save {
+  cursor: pointer;
+  color: #2563eb;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  font-family: inherit; /* 继承父容器字体 */
+  font-size: inherit; /* 继承父容器字体大小 */
+  line-height: inherit; /* 继承父容器行高 */
+}
+
+.keep-ai-memory-save:hover {
+  color: #1d4ed8;
+  transform: scale(1.1);
+}
+
+/* 状态样式 */
+.keep-ai-memory-auto-save {
+  border-left-color: #16a34a; /* 自动保存绿色 */
+}
+
+.keep-ai-memory-auto-save .keep-ai-memory-icon {
+  color: #16a34a;
+}
+
+.keep-ai-memory-manual-save {
+  border-left-color: #f59e0b; /* 手动保存橙色 */
+}
+
+.keep-ai-memory-manual-save .keep-ai-memory-icon {
+  color: #f59e0b;
+}
+
+/* 移除保存中状态样式，简化交互流程 */
+
+.keep-ai-memory-success {
+  border-left-color: #16a34a; /* 成功绿色 */
+}
+
+.keep-ai-memory-success .keep-ai-memory-icon {
+  color: #16a34a;
+}
+
+/* 悬浮标签动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 移除旋转动画，不再需要保存中状态 */
+
+.keep-ai-memory-fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+/* 拖拽贴边视觉引导提示 */
+.edge-guide {
+  position: fixed;
+  top: 0;
+  width: 4px;
+  height: 100vh;
+  background: linear-gradient(to bottom, 
+    rgba(37, 99, 235, 0.8) 0%, 
+    rgba(37, 99, 235, 0.6) 50%, 
+    rgba(37, 99, 235, 0.8) 100%);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.edge-guide.left {
+  left: 0;
+  border-radius: 0 2px 2px 0;
+}
+
+.edge-guide.right {
+  right: 0;
+  border-radius: 2px 0 0 2px;
+}
+
+.edge-guide.active {
+  opacity: 1;
+  animation: edgePulse 1s ease-in-out infinite;
+}
+
+/* 边缘引导脉冲动画 */
+@keyframes edgePulse {
+  0%, 100% { 
+    opacity: 0.6;
+    transform: scaleX(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scaleX(1.5);
+  }
+}
+
+/* 拖拽时接近边缘的悬浮标签样式 */
+.keep-ai-memory-float.near-edge {
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+  border: 2px solid rgba(37, 99, 235, 0.5);
+}
