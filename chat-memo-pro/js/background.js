@@ -26,7 +26,9 @@ const PLATFORM_NAMES = {
   'claude': 'Claude',
   'yuanbao': '腾讯元宝',
   'doubao': '豆包',
-  'kimi': 'Kimi'
+  'kimi': 'Kimi',
+  'manus': 'Manus',
+  'genspark': 'Genspark'
 };
 
 // 扩展安装或更新时

@@ -26,7 +26,9 @@ const PLATFORM_NAMES = {
   'deepseek': 'DeepSeek',
   'yuanbao': '腾讯元宝',
   'doubao': '豆包',
-  'kimi': 'Kimi'
+  'kimi': 'Kimi',
+  'manus': 'Manus',
+  'genspark': 'Genspark'
 };
 
 // DOM元素缓存

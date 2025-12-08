@@ -35,6 +35,12 @@
    }, {
       "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/kimi.js" ],
       "matches": [ "https://kimi.moonshot.cn/*", "https://*.kimi.com/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/manus.js" ],
+      "matches": [ "https://manus.im/*" ]
+   }, {
+      "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/genspark.js" ],
+      "matches": [ "https://www.genspark.ai/*" ]
    } ],
    "default_locale": "en",
    "description": "__MSG_extensionDescription__",
