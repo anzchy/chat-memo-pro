@@ -158,25 +158,71 @@ class ManusAdapter extends BasePlatformAdapter {
   extractMessages() {
     const messages = [];
 
-    // 提取用户消息
-    const userMessage = this.findUserMessage();
-    if (userMessage) {
-      messages.push({
-        role: 'user',
-        content: userMessage,
-        timestamp: Date.now()
-      });
+    // 查找聊天主容器
+    // 基于提供的HTML片段，用户消息是 items-end，AI消息可能是 items-start
+    // 我们查找包含这些消息的共同父容器
+    
+    // 策略：查找所有可能的消息行
+    // 用户消息包含 items-end 和 justify-end
+    const userMessageRows = document.querySelectorAll('div[class*="items-end"][class*="justify-end"][data-event-id]');
+    
+    // AI消息通常在其后，或者是其他样式的行
+    // 我们可以尝试查找所有 data-event-id 的元素，然后根据内部特征区分
+    const allMessageRows = document.querySelectorAll('div[data-event-id]');
+    
+    if (allMessageRows.length === 0) {
+        // 如果找不到 data-event-id，尝试回退到旧的启发式方法
+        const userMessage = this.findUserMessage();
+        if (userMessage) {
+            messages.push({ role: 'user', content: userMessage, timestamp: Date.now() });
+        }
+        const aiResponse = this.extractAIResponse();
+        if (aiResponse) {
+            messages.push({ role: 'assistant', content: aiResponse, timestamp: Date.now() });
+        }
+        return messages;
     }
-
-    // 提取AI响应
-    const aiResponse = this.extractAIResponse();
-    if (aiResponse) {
-      messages.push({
-        role: 'assistant',
-        content: aiResponse,
-        timestamp: Date.now()
-      });
-    }
+    
+    allMessageRows.forEach(row => {
+        let role = 'assistant';
+        let content = '';
+        
+        // 判定角色
+        if (row.classList.contains('items-end') && row.classList.contains('justify-end')) {
+            role = 'user';
+        }
+        
+        // 提取内容
+        if (role === 'user') {
+            // 用户消息通常在 whitespace-pre-wrap 的 span 或 div 中
+            const contentEl = row.querySelector('.whitespace-pre-wrap');
+            if (contentEl) {
+                content = contentEl.innerText.trim();
+            }
+        } else {
+            // AI消息
+            // 尝试查找 markdown 渲染区域或普通文本
+            // Manus 的 AI 消息可能包含多个步骤（steps）和最终回答
+            // 我们提取整个文本内容，或者寻找特定的 markdown 容器
+            const contentEl = row.querySelector('.markdown-body') || row;
+            content = contentEl.innerText.trim();
+        }
+        
+        if (content && content.length > 0 && !this.isUIElement(content)) {
+            // 合并连续的AI消息
+            if (role === 'assistant' && messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+                // 如果上一条也是AI消息，则合并内容
+                messages[messages.length - 1].content += '\n\n' + content;
+            } else {
+                // 否则添加新消息
+                messages.push({
+                    role: role,
+                    content: content,
+                    timestamp: Date.now() // 注意：这里最好能提取实际时间，但目前片段里只有 hover 可见的时间
+                });
+            }
+        }
+    });
 
     return messages;
   }
@@ -266,6 +312,13 @@ class ManusAdapter extends BasePlatformAdapter {
       subtree: true,
       characterData: true
     });
+    
+    // 添加定期检查（每30秒）
+    if (this.periodicCheckInterval) clearInterval(this.periodicCheckInterval);
+    this.periodicCheckInterval = setInterval(() => {
+        console.log('Keep AI Memory (Manus): 定期检查新消息...');
+        this.checkForActualMessageChanges();
+    }, 30000);
 
     // 首次提取
     this.handleMutation();
@@ -284,7 +337,7 @@ class ManusAdapter extends BasePlatformAdapter {
       console.log('Keep AI Memory (Manus): 检测到新内容', messages);
 
       // 调用基类保存逻辑
-      this.checkAndSaveMessages();
+      this.checkForActualMessageChanges();
     }
   }
 }
@@ -293,6 +346,7 @@ class ManusAdapter extends BasePlatformAdapter {
 if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     const adapter = new ManusAdapter();
-    adapter.init();
+    adapter.start();
+    window.AdapterInstance = adapter;
   });
 }

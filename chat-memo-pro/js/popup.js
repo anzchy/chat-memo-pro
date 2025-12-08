@@ -874,7 +874,7 @@ function renderConversationMessages(messages, searchTerm = '') {
     
     // 消息头部：发送者和时间戳
     content += `<div class="flex justify-between items-start mb-2">
-      <div class="message-sender">${message.sender === 'user' ? i18n('user') : i18n('ai')}</div>
+      <div class="message-sender">${message.sender === 'user' ? 'USER' : i18n('ai')}</div>
       <div class="message-timestamp">${formatTime(getCompatibleTime(message))}</div>
     </div>`;
     

@@ -44,80 +44,82 @@ class GensparkAdapter extends BasePlatformAdapter {
 
   /**
    * 提取页面上的所有消息
-   * 使用fallback selector策略
    * @returns {Array} - 消息数组
    */
   extractMessages() {
     const messages = [];
 
-    // 查找对话容器
-    const container = document.querySelector('main') ||
-                     document.querySelector('[role="main"]') ||
-                     document.querySelector('.conversation-container');
+    // 查找所有消息气泡元素
+    const messageBubbles = document.querySelectorAll('div.bubble[message-content-id]');
 
-    if (!container) {
-      console.log('Keep AI Memory (Genspark): 未找到对话容器');
+    if (messageBubbles.length === 0) {
+      console.log('Keep AI Memory (Genspark): 未找到任何消息气泡元素');
       return messages;
     }
 
-    // 策略：使用多层fallback选择器
-    // 按优先级尝试不同的选择器策略
-    const messageSelectors = [
-      '[class*="message"]',
-      '[class*="chat"]',
-      '[class*="conversation"]',
-      'div[class*="flex"]',
-      'div > div'
-    ];
+    messageBubbles.forEach(bubble => {
+      let role = 'assistant';
+      let content = '';
 
-    let messageElements = [];
-    let usedSelector = '';
-
-    for (const selector of messageSelectors) {
-      messageElements = container.querySelectorAll(selector);
-      if (messageElements.length > 0) {
-        usedSelector = selector;
-        console.log(`Keep AI Memory (Genspark): 使用选择器 "${selector}" 找到 ${messageElements.length} 个元素`);
-        break;
-      }
-    }
-
-    if (messageElements.length === 0) {
-      console.log('Keep AI Memory (Genspark): 未找到任何消息元素');
-      return messages;
-    }
-
-    // 提取消息内容
-    messageElements.forEach((element) => {
-      const text = element.innerText?.trim();
-      if (!text || text.length < 5) return;
-
-      // 判断消息角色（基于布局和class）
-      let role = 'assistant'; // 默认AI响应
-
-      const classNames = element.className || '';
-      const style = window.getComputedStyle(element);
-
-      // 用户消息通常右对齐或包含特定class
-      if (classNames.includes('user') ||
-          classNames.includes('query') ||
-          style.textAlign === 'right' ||
-          style.justifyContent === 'flex-end') {
+      // Determine role:
+      // Priority 1: Check for the explicit 'conversation-item-desc user' ancestor
+      const userDescParent = bubble.closest('.conversation-item-desc.user');
+      
+      if (userDescParent) {
         role = 'user';
+      } else {
+        // Fallback/Priority 2: Heuristic based on content structure
+        // User messages often contain 'pre code' directly, while AI messages often contain 'markdown-viewer'
+        const preCodeElement = bubble.querySelector('.content pre code');
+        const markdownViewerElement = bubble.querySelector('.content .markdown-viewer');
+
+        // If it has a <pre><code> block AND no markdown viewer, it's very likely a user message
+        if (preCodeElement && !markdownViewerElement) {
+          role = 'user';
+        } else {
+          // Default to assistant if no clear user indicator
+          role = 'assistant';
+        }
       }
 
-      // AI消息通常左对齐或包含特定class
-      if (classNames.includes('assistant') ||
-          classNames.includes('response') ||
-          classNames.includes('ai')) {
-        role = 'assistant';
+      if (role === 'user') {
+        // For user messages, try specific code block first, then fallback to generic content
+        const codeElement = bubble.querySelector('.content pre code');
+        if (codeElement) {
+          content = codeElement.innerText.trim();
+        } else {
+          // Fallback: try getting text directly from content div if pre/code structure changes
+          const contentDiv = bubble.querySelector('.content');
+          if (contentDiv) {
+            content = contentDiv.innerText.trim();
+          }
+        }
+      } else { // role is assistant
+        // Priority 1: Markdown viewer content
+        const markdownViewer = bubble.querySelector('.content .markdown-viewer');
+        if (markdownViewer) {
+          content = markdownViewer.innerText.trim();
+        } else {
+          // Priority 2: Direct content text (fallback)
+          const contentDiv = bubble.querySelector('.content');
+          if (contentDiv) {
+            content = contentDiv.innerText.trim();
+          }
+        }
       }
 
-      messages.push({
-        role: role,
-        content: text,
-        timestamp: Date.now()
-      });
+      if (content && content.length > 0 && !this.isUIElement(content)) {
+        // Merge consecutive AI messages
+        if (role === 'assistant' && messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+          messages[messages.length - 1].content += '\n\n' + content;
+        } else {
+          messages.push({
+            role: role,
+            content: content,
+            timestamp: Date.now()
+          });
+        }
+      }
     });
 
     console.log(`Keep AI Memory (Genspark): 提取到 ${messages.length} 条消息`);
@@ -125,22 +127,38 @@ class GensparkAdapter extends BasePlatformAdapter {
   }
 
   /**
-   * 检查元素是否为消息元素
-   * @param {Node} node - 要检查的DOM节点
-   * @returns {boolean} - 是否为消息元素
+   * 开始监听DOM变化
+   * 重写基类方法以添加定时检查
    */
-  isMessageElement(node) {
-    if (node.nodeType !== Node.ELEMENT_NODE) return false;
+  startObserving() {
+    // 调用基类方法设置MutationObserver
+    const observer = super.setupMutationObserver();
+    this.contentObserver = observer;
 
-    const classNames = node.className || '';
-
-    // 检查是否包含消息相关class
-    return classNames.includes('message') ||
-           classNames.includes('chat') ||
-           classNames.includes('user') ||
-           classNames.includes('assistant') ||
-           classNames.includes('response');
+    // 添加定期检查（每15秒）
+    if (this.periodicCheckInterval) clearInterval(this.periodicCheckInterval);
+    this.periodicCheckInterval = setInterval(() => {
+        console.log('Keep AI Memory (Genspark): 定期检查新消息...');
+        this.checkForActualMessageChanges();
+    }, 15000);
   }
+
+  /**
+   * 过滤UI元素（针对Genspark，如果消息内容中包含不应该保存的UI文本）
+   * 从提供的HTML看，Copy/Deep Research按钮在 bubble 外，innerText应该比较干净
+   * 但可以保留一些通用过滤
+   * @param {string} text 
+   */
+  isUIElement(text) {
+    const uiPatterns = [
+      'Copy', 'Deep Research', 'Save to Notion' // Text that might appear in a message but is UI control
+    ];
+    return uiPatterns.some(pattern => text === pattern || text.includes(pattern + ' ')); // Check for exact match or pattern followed by space
+  }
+
+
+
+
 
   /**
    * 提取标题
@@ -168,6 +186,7 @@ class GensparkAdapter extends BasePlatformAdapter {
 if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     const adapter = new GensparkAdapter();
-    adapter.init();
+    adapter.start();
+    window.AdapterInstance = adapter;
   });
 }
