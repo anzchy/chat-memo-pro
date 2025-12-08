@@ -187,7 +187,7 @@ class ManusAdapter extends BasePlatformAdapter {
         let role = 'assistant';
         let content = '';
         
-        // 判定角色
+        // 判定角色：精确检查类名
         if (row.classList.contains('items-end') && row.classList.contains('justify-end')) {
             role = 'user';
         }

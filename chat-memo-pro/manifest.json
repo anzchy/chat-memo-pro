@@ -6,7 +6,7 @@
          "48": "icons/logo_48.png"
       }
    },
-   "author": "一泽Eze",
+   "author": "Eze & Jack",
    "background": {
       "service_worker": "js/background.js"
    },
@@ -52,7 +52,7 @@
    },
    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAre7UX2HP+oJ0kXd0OePDzr+Kr9vxCCis20eJkDFrtL+3RhQRnByyxgYUkLKbYxCB4n3QJhfhJf0BLYNnqmzeVrIVFy3RqgD8MqmjsE00N3VxlMUWlq+p/ksUelJWa2YgnoKwG+5cGtRdA/5PPVuUku/+lLq6ztKhMgHlveFLFkEX5CMBLktwcr+51qZRet4mu2V4zqTZUvHP1Vk0l+ypviM60hPbBh06YreyV8rIjtwJFYqLgwwLKpbe70G44+PRW6XBpMn4Xgz4ZBhQ6HzAP3hAe7iEvnFIebBN/O5indWxkv9zABJf+hHi+nqbS+rbfZrR7BQXCTlstK48uuhZGwIDAQAB",
    "manifest_version": 3,
-   "name": "__MSG_extensionName__",
+   "name": "Chat Memo Pro",
    "permissions": [ "storage", "tabs", "downloads" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "1.1.2",

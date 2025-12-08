@@ -74,6 +74,7 @@ class GensparkAdapter extends BasePlatformAdapter {
         const markdownViewerElement = bubble.querySelector('.content .markdown-viewer');
 
         // If it has a <pre><code> block AND no markdown viewer, it's very likely a user message
+        // Also checking if the bubble itself has specific user-like classes if available (though Genspark seems to use parent wrapper)
         if (preCodeElement && !markdownViewerElement) {
           role = 'user';
         } else {
