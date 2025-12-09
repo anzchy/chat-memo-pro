@@ -9,3 +9,12 @@
 用 class name：`.manus-markdown.group` 精准定位
 
 4.请在对话框中通过这两种 class name 不同区分出user 和 assistant。
+
+
+5. 提取 conversation title:
+
+<link rel="canonical" href="https://manus.im/app/GUqmc2wmtBPScu66114DgJ">
+<title>如何创意求职应聘VC行业AI赛道高级投资经理 - Manus</title>
+
+<link rel="canonical" href="https://manus.im/app/GUqmc2wmtBPScu66114DgJ">
+<title>微信消息同步到Obsidian的实现与开源方案 - Manus</title>
