@@ -260,6 +260,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
+/**
+ * 带重试的发送侧边栏切换消息
+ * @param {number} tabId - 标签页ID
+ * @param {number} retries - 剩余重试次数
+ */
+async function sendToggleSidebarWithRetry(tabId, retries = 3) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'toggleSidebar' });
+    console.log('Chat-Memo: 侧边栏切换消息发送成功');
+  } catch (error) {
+    if (retries > 0) {
+      console.log(`Chat-Memo: 消息发送失败，${200}ms 后重试 (剩余 ${retries} 次)...`);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return sendToggleSidebarWithRetry(tabId, retries - 1);
+    } else {
+      console.error('Chat-Memo: 发送打开侧边栏消息失败:', error.message);
+      console.log('Chat-Memo: content script 可能未加载，请刷新页面后重试');
+    }
+  }
+}
+
 // 监听扩展图标点击事件，发送消息给 content script 打开注入式侧边栏
 chrome.action.onClicked.addListener((tab) => {
   // 检查是否在支持的页面（有 content script 的页面）
@@ -271,11 +292,8 @@ chrome.action.onClicked.addListener((tab) => {
     return;
   }
 
-  // 现在使用注入式侧边栏方案，直接发送消息给 content script
-  chrome.tabs.sendMessage(tab.id, { type: 'toggleSidebar' }).catch(error => {
-    console.error('Chat-Memo: 发送打开侧边栏消息失败:', error.message);
-    // 可能的原因：content script 还未加载完成
-  });
+  // 使用带重试的发送函数
+  sendToggleSidebarWithRetry(tab.id);
 });
 
 // 数据库对象和相关函数

@@ -308,40 +308,12 @@ function registerEventListeners() {
   // 设置页面
   elements.autoSaveToggle.addEventListener('change', updateAutoSaveSetting);
   elements.clearBtn.addEventListener('click', showClearConfirmModal);
-  
-  // 绑定导出按钮下拉菜单事件
-  const exportDropdown = document.getElementById('export-dropdown');
-  const exportSeparateBtn = document.getElementById('export-separate');
-  const exportMergedBtn = document.getElementById('export-merged');
-  
-  // 点击导出按钮显示/隐藏下拉菜单
-  elements.exportBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    exportDropdown.classList.toggle('hidden');
+
+  // 绑定导出按钮事件 - 直接打开导出向导
+  elements.exportBtn.addEventListener('click', () => {
+    openExportWizard('multiple'); // 默认打开多文件模式
   });
-  
-  // 点击其他地方隐藏下拉菜单
-  document.addEventListener('click', () => {
-    exportDropdown.classList.add('hidden');
-  });
-  
-  // 阻止下拉菜单内部点击事件冒泡
-  exportDropdown.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
-  
-  // 绑定分别导出按钮事件
-  exportSeparateBtn.addEventListener('click', () => {
-    exportDropdown.classList.add('hidden');
-    openExportWizard('multiple');
-  });
-  
-  // 绑定合并导出按钮事件
-  exportMergedBtn.addEventListener('click', () => {
-    exportDropdown.classList.add('hidden');  
-    openExportWizard('single');
-  });
-  
+
   // 清空确认弹窗
   elements.cancelClear.addEventListener('click', hideClearConfirmModal);
   elements.confirmClear.addEventListener('click', clearStorage);
@@ -1868,7 +1840,7 @@ function highlightSearchTerm(text, searchTerm) {
   let highlightedText = escapeHtml(tempText);
 
   // 3. 将特殊标记替换为<mark>标签
-  highlightedText = highlightedText.replace(/###HIGHLIGHT_START###(.*?)###HIGHLIGHT_END###/g, '<mark class="bg-yellow-200">$1</mark>');
+  highlightedText = highlightedText.replace(/###HIGHLIGHT_START###(.*?)###HIGHLIGHT_END###/g, '<mark class="highlight">$1</mark>');
 
   return highlightedText;
 }
@@ -1895,7 +1867,7 @@ function highlightSearchTermForDetail(text, searchTerm) {
   highlightedText = formatTextToHtml(highlightedText);
   
   // 将特殊标记符替换为实际的高亮标签
-  highlightedText = highlightedText.replace(/###HIGHLIGHT_START###(.*?)###HIGHLIGHT_END###/g, '<mark class="bg-yellow-200">$1</mark>');
+  highlightedText = highlightedText.replace(/###HIGHLIGHT_START###(.*?)###HIGHLIGHT_END###/g, '<mark class="highlight">$1</mark>');
   
   return highlightedText;
 }
@@ -2013,7 +1985,7 @@ function highlightFuseMatches(text, indices) {
     
     // 添加匹配部分 (加高亮)
     // end 是包含的，所以 substring 需要 end + 1
-    result += `<mark class="bg-yellow-200 rounded-sm px-0.5">${escapeHtml(text.substring(start, end + 1))}</mark>`;
+    result += `<mark class="highlight">${escapeHtml(text.substring(start, end + 1))}</mark>`;
     
     lastIndex = end + 1;
   });
@@ -2649,10 +2621,11 @@ function initializeFuzzySearch(conversations) {
       { name: 'messages.content', weight: 1 },
       { name: 'messages.thinking', weight: 0.5 }
     ],
-    threshold: 0.3, // 匹配阈值，越低越精确
+    threshold: 0.4, // 匹配阈值，越低越精确，0.4 对中文更友好
     includeMatches: true,
     includeScore: true,
-    minMatchCharLength: 2,
+    minMatchCharLength: 1, // 允许单字符搜索，对中文很重要
+    distance: 100, // 允许更长距离的字符匹配，对中文长文本搜索更有利
     ignoreLocation: true,
     useExtendedSearch: true
   };
@@ -2704,7 +2677,7 @@ function performSearchAndFilter() {
       // 使用 Fuse.js 进行模糊搜索
       const fuseResults = fuse.search(currentSearchTerm);
       // fuseResults 是 [{item, score, matches}, ...]
-      
+
       // 过滤结果并保留匹配信息
       results = fuseResults
         .filter(res => checkConversationMatchesFilter(res.item))
@@ -2714,9 +2687,10 @@ function performSearchAndFilter() {
           res.item._score = res.score;
           return res.item;
         });
-        
-      // 如果没有结果且搜索词很短，尝试普通搜索作为回退
-      if (results.length === 0 && currentSearchTerm.length < 2) {
+
+      // 如果 Fuse.js 没有找到结果，尝试普通字符串搜索作为回退
+      // 这对于中文和精确匹配特别有用
+      if (results.length === 0) {
          results = searchConversations(allConversations, currentSearchTerm)
            .filter(conv => checkConversationMatchesFilter(conv));
       }
@@ -3934,7 +3908,20 @@ const exportWizard = {
    */
   startExport() {
     const conversationIds = this.state.filteredConversations.map(c => c.conversationId);
-    
+
+    // Check estimated file size and warn if >100MB
+    const estimatedSize = this.estimateSize(this.state.filteredConversations);
+    const MAX_SIZE_WARNING = 100 * 1024 * 1024; // 100MB in bytes
+
+    if (estimatedSize > MAX_SIZE_WARNING) {
+      const sizeInMB = (estimatedSize / (1024 * 1024)).toFixed(1);
+      const message = `Warning: The estimated export size is ${sizeInMB} MB, which is quite large. This may take some time to process and could cause performance issues.\n\nDo you want to continue?`;
+
+      if (!confirm(message)) {
+        return; // User cancelled
+      }
+    }
+
     // Metadata for export filename or logging
     const metadata = {
       exportMode: 'wizard',
@@ -3943,10 +3930,10 @@ const exportWizard = {
       mode: this.state.mode,
       totalCount: conversationIds.length
     };
-    
+
     const buttonManager = new ExportButtonManager(this.elements.startBtn);
     buttonManager.setLoading();
-    
+
     // Use new specialized export function
     exportConversationsAdvanced(conversationIds, this.state.mode, this.state.format, metadata)
       .then(() => {
@@ -3961,7 +3948,9 @@ const exportWizard = {
 };
 
 /**
- * Helper to open the wizard
+ * Helper to open the export wizard
+ * Ensures the wizard is initialized before opening
+ * @param {string} [initialMode='multiple'] - Initial export mode ('multiple' or 'single')
  */
 function openExportWizard(initialMode) {
   // Ensure wizard is initialized
@@ -3976,6 +3965,11 @@ function openExportWizard(initialMode) {
  * Advanced export function handling different formats and modes locally in popup
  * This replaces the simple background `exportConversationsByRange` for wizard use
  * to give more control over formatting on the client side (JSZip, etc.)
+ * @param {Array<string>} conversationIds - Array of conversation IDs to export
+ * @param {string} mode - Export mode ('single' for merged file, 'multiple' for ZIP)
+ * @param {string} format - File format ('markdown', 'json', or 'txt')
+ * @param {Object} metadata - Export metadata (timeRange, exportMode, totalCount, etc.)
+ * @returns {Promise<void>}
  */
 async function exportConversationsAdvanced(conversationIds, mode, format, metadata) {
   // Get full conversation details if not already fully loaded (though allConversations usually has them)
@@ -4041,6 +4035,12 @@ async function exportConversationsAdvanced(conversationIds, mode, format, metada
   }
 }
 
+/**
+ * Formats a date for use in filenames
+ * @param {Date} date - The date to format
+ * @returns {string} Formatted date string in YYYYMMdd_HHmm format
+ * @example formatDateForFilename(new Date()) // "20231215_1430"
+ */
 function formatDateForFilename(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -4050,10 +4050,22 @@ function formatDateForFilename(date) {
   return `${y}${m}${d}_${h}${min}`;
 }
 
+/**
+ * Sanitizes a string to be safe for use as a filename
+ * Replaces invalid characters and limits length
+ * @param {string} name - The filename to sanitize
+ * @returns {string} Sanitized filename (max 50 chars)
+ */
 function sanitizeFilename(name) {
   return name.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_').substring(0, 50);
 }
 
+/**
+ * Downloads a file using Chrome's download API
+ * @param {string} content - The file content
+ * @param {string} filename - The filename to save as
+ * @param {string} mimeType - MIME type (e.g., 'text/plain', 'application/json')
+ */
 function downloadFile(content, filename, mimeType) {
   const blob = new Blob([content], {type: mimeType});
   const url = URL.createObjectURL(blob);
@@ -4064,7 +4076,11 @@ function downloadFile(content, filename, mimeType) {
   });
 }
 
-// Placeholder export format functions - to be implemented fully in next steps
+/**
+ * Exports conversations as JSON with metadata wrapper
+ * @param {Array<Object>} conversations - Array of conversation objects to export
+ * @returns {string} JSON string with meta wrapper and formatted data
+ */
 function exportAsJSON(conversations) {
   return JSON.stringify({
     meta: {
@@ -4076,6 +4092,12 @@ function exportAsJSON(conversations) {
   }, null, 2);
 }
 
+/**
+ * Exports conversations as Markdown format
+ * @param {Array<Object>} conversations - Array of conversation objects to export
+ * @param {boolean} isMerged - Whether to merge into single file or individual format
+ * @returns {string} Markdown formatted text
+ */
 function exportAsMarkdown(conversations, isMerged) {
   return conversations.map(conv => {
     const date = new Date(getCompatibleTime(conv)).toLocaleString();
@@ -4098,6 +4120,12 @@ function exportAsMarkdown(conversations, isMerged) {
   }).join(isMerged ? '\n\n---\n\n' : '');
 }
 
+/**
+ * Exports conversations as plain text format
+ * @param {Array<Object>} conversations - Array of conversation objects to export
+ * @param {boolean} isMerged - Whether to merge into single file or individual format
+ * @returns {string} Plain text formatted string with headers and separators
+ */
 function exportAsPlainText(conversations, isMerged) {
   return conversations.map(conv => {
     const date = new Date(getCompatibleTime(conv)).toLocaleString();

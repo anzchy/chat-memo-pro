@@ -1,3 +1,5 @@
+==Phase 4-Phase 7 中的代码需要 Claude 一一 review==
+
 # Tasks: Chat Memo Pro - Core Enhanced Features
 
 **Input**: Design documents from `/specs/001-core-enhanced-features/`

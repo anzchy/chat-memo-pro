@@ -67,16 +67,49 @@ class ManusAdapter extends BasePlatformAdapter {
   }
 
   /**
-   * 过滤UI元素
+   * 过滤UI元素和元数据
    * @param {string} text - 要检查的文本
-   * @returns {boolean} - 是否为UI元素
+   * @returns {boolean} - 是否为UI元素或应该过滤的内容
    */
   isUIElement(text) {
     const uiPatterns = [
       'New task', 'Search', 'Library', 'Projects',
       'Share Manus', 'Manus 1.5', '优化指令', 'Settings'
     ];
-    return uiPatterns.some(pattern => text.includes(pattern));
+
+    // 过滤UI元素
+    if (uiPatterns.some(pattern => text.includes(pattern))) {
+      return true;
+    }
+
+    // 过滤纯时间戳（如 "00:12"）
+    if (/^\d{1,2}:\d{2}$/.test(text.trim())) {
+      return true;
+    }
+
+    // 过滤太短的文本（可能是UI标签）
+    if (text.trim().length < 3) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 清理消息内容，移除时间戳前缀
+   * @param {string} content - 原始内容
+   * @returns {string} - 清理后的内容
+   */
+  cleanMessageContent(content) {
+    if (!content) return '';
+
+    // 移除开头的时间戳（如 "00:12 消息内容" -> "消息内容"）
+    let cleaned = content.replace(/^\d{1,2}:\d{2}\s+/, '').trim();
+
+    // 移除多余的空白字符
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    return cleaned;
   }
 
   /**
@@ -210,7 +243,10 @@ class ManusAdapter extends BasePlatformAdapter {
             const contentEl = row.querySelector('.markdown-body') || row;
             content = contentEl.innerText.trim();
         }
-        
+
+        // 清理消息内容（移除时间戳等）
+        content = this.cleanMessageContent(content);
+
         if (content && content.length > 0 && !this.isUIElement(content)) {
             // 合并连续的AI消息
             if (role === 'assistant' && messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
@@ -245,25 +281,52 @@ class ManusAdapter extends BasePlatformAdapter {
    * @returns {string} - 提取的标题
    */
   extractTitle() {
-    // 尝试从页面UI提取对话标题
+    // 策略1: 尝试从页面UI提取对话标题
     const titleElement = document.querySelector('.text-base.font-medium.truncate');
-    if (titleElement) {
-      return titleElement.innerText.trim();
+    if (titleElement && titleElement.innerText.trim()) {
+      const title = titleElement.innerText.trim();
+      if (title !== 'Manus Task' && title.length > 0) {
+        return title;
+      }
     }
 
-    // 尝试从页面标题提取
-    const title = document.title;
-    if (title && !title.includes('Manus')) {
-      return title;
+    // 策略2: 从提取的消息中获取第一条用户消息作为标题
+    const messages = this.extractMessages();
+    if (messages.length > 0) {
+      // 查找第一条用户消息
+      const firstUserMessage = messages.find(msg => msg.role === 'user');
+      if (firstUserMessage && firstUserMessage.content) {
+        const content = firstUserMessage.content.trim();
+        // 清理内容：移除多余的空白和换行
+        const cleanContent = content.replace(/\s+/g, ' ').trim();
+        // 限制长度为60个字符
+        return cleanContent.substring(0, 60) + (cleanContent.length > 60 ? '...' : '');
+      }
+
+      // 如果没有用户消息，使用第一条助手消息
+      const firstMessage = messages[0];
+      if (firstMessage && firstMessage.content) {
+        const content = firstMessage.content.trim();
+        const cleanContent = content.replace(/\s+/g, ' ').trim();
+        return cleanContent.substring(0, 60) + (cleanContent.length > 60 ? '...' : '');
+      }
     }
 
-    // 或从用户消息生成标题
+    // 策略3: 尝试从页面标题提取
+    const pageTitle = document.title;
+    if (pageTitle && !pageTitle.includes('Manus') && pageTitle !== 'Manus Task') {
+      return pageTitle;
+    }
+
+    // 策略4: 使用启发式方法查找用户消息
     const userMessage = this.findUserMessage();
     if (userMessage && userMessage.length > 0) {
-      return userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : '');
+      const cleanContent = userMessage.replace(/\s+/g, ' ').trim();
+      return cleanContent.substring(0, 60) + (cleanContent.length > 60 ? '...' : '');
     }
 
-    return 'Manus Task';
+    // 默认标题
+    return 'Manus Conversation';
   }
 
   /**

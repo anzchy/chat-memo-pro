@@ -46,6 +46,20 @@ class GensparkAdapter extends BasePlatformAdapter {
   }
 
   /**
+   * 判断元素是否为消息元素
+   * @param {HTMLElement} element - 要检查的DOM元素
+   * @returns {boolean} - 是否为消息元素
+   */
+  isMessageElement(element) {
+    if (!element || !element.matches) {
+      return false;
+    }
+
+    // Genspark 的消息元素是 div.bubble[message-content-id]
+    return element.matches('div.bubble[message-content-id]');
+  }
+
+  /**
    * 提取页面上的所有消息
    * @returns {Array} - 消息数组
    */

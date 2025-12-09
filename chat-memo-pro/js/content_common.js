@@ -967,9 +967,16 @@ function createSidebar() {
     }
   `;
 
-  // 将侧边栏和样式添加到页面
-  document.head.appendChild(style);
-  document.body.appendChild(sidebar);
+  // 将样式添加到页面（document.head 通常比 body 更早准备好）
+  if (document.head) {
+    document.head.appendChild(style);
+  }
+
+  // 只在 document.body 存在时添加侧边栏
+  // 否则留给 toggleSidebar 函数在准备好后添加
+  if (document.body) {
+    document.body.appendChild(sidebar);
+  }
 
   // 添加关闭按钮事件监听器
   const closeBtn = header.querySelector('.sidebar-close-btn');
@@ -982,10 +989,45 @@ function createSidebar() {
 }
 
 /**
+ * 确保 document.body 已准备好
+ * @returns {Promise<void>}
+ */
+function ensureBodyReady() {
+  return new Promise((resolve) => {
+    if (document.body) {
+      resolve();
+      return;
+    }
+
+    // 如果 body 还不存在，等待它准备好
+    const observer = new MutationObserver(() => {
+      if (document.body) {
+        observer.disconnect();
+        resolve();
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+
+    // 备用方案：最多等待 5 秒
+    setTimeout(() => {
+      observer.disconnect();
+      resolve();
+    }, 5000);
+  });
+}
+
+/**
  * 切换侧边栏显示状态
  * @param {boolean} force - 强制设置状态（可选）
  */
-function toggleSidebar(force) {
+async function toggleSidebar(force) {
+  // 确保 document.body 已准备好
+  await ensureBodyReady();
+
   let sidebar = document.getElementById('chat-memo-sidebar');
   const isOpen = sidebar && sidebar.classList.contains('open');
   const shouldOpen = force !== undefined ? force : !isOpen;
@@ -995,8 +1037,16 @@ function toggleSidebar(force) {
     if (!sidebar) {
       sidebar = createSidebar();
     }
-    sidebar.classList.add('open');
-    console.log('Chat-Memo: 侧边栏已打开');
+
+    // 确保侧边栏已添加到 DOM（防止创建失败）
+    if (sidebar && !sidebar.parentElement) {
+      document.body.appendChild(sidebar);
+    }
+
+    if (sidebar) {
+      sidebar.classList.add('open');
+      console.log('Chat-Memo: 侧边栏已打开');
+    }
   } else {
     // 关闭时，直接从DOM移除，而不是隐藏
     if (sidebar) {
@@ -1009,10 +1059,18 @@ function toggleSidebar(force) {
 // 监听来自 background 的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'toggleSidebar') {
-    toggleSidebar();
-    sendResponse({ status: 'ok' });
+    // toggleSidebar 现在是异步函数，需要正确处理
+    toggleSidebar()
+      .then(() => {
+        sendResponse({ status: 'ok' });
+      })
+      .catch((error) => {
+        console.error('Chat-Memo: 切换侧边栏失败', error);
+        sendResponse({ status: 'error', error: error.message });
+      });
+    return true; // 保持消息通道开放以支持异步响应
   }
-  return true; // 保持消息通道开放
+  return true;
 });
 
 console.log('Chat-Memo: 注入式侧边栏功能已加载');

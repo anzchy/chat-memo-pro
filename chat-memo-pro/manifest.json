@@ -55,7 +55,7 @@
    "name": "Chat Memo Pro",
    "permissions": [ "storage", "tabs", "downloads" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.1.2",
+   "version": "1.0.0",
    "web_accessible_resources": [ {
       "matches": [ "\u003Call_urls>" ],
       "resources": [ "lib/*", "icons/*", "html/popup.html", "css/*", "js/popup.js" ]

@@ -586,6 +586,64 @@
       color: #1890ff;
       font-size: 14px;
     }
+
+    /* Fuzzy Search Highlight Styles */
+    mark.highlight {
+      background-color: #fef08a;
+      color: #000;
+      padding: 0 2px;
+      border-radius: 2px;
+      font-weight: 500;
+    }
+
+    /* Resizable Sidebar - Responsive Breakpoints */
+    /* Narrow sidebar (<450px) - vertical stacking */
+    .sidebar-narrow .stats-container {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar-narrow .preview-text {
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Wide sidebar (≥450px) - horizontal layout */
+    .sidebar-wide .stats-container {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .sidebar-wide .preview-text {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Very wide sidebar (>600px) */
+    body:not(.sidebar-narrow).sidebar-wide .preview-text {
+      -webkit-line-clamp: 3;
+    }
+
+    /* Resize handle styles */
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 5px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 1000;
+      background-color: transparent;
+      transition: background-color 0.2s ease;
+    }
+
+    .resize-handle:hover {
+      background-color: rgba(59, 130, 246, 0.2);
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -1063,22 +1121,9 @@
           
           <div class="space-y-2">
             <div class="flex gap-2">
-              <div class="flex-1 relative">
-                <button id="export-btn" class="w-full bg-blue-50 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center justify-center relative">
-                  <i class="fas fa-download mr-1.5"></i><span data-i18n="exportData">导出数据</span>
-                  <i class="fas fa-chevron-down text-xs absolute right-3"></i>
-                </button>
-                <div id="export-dropdown" class="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden overflow-hidden min-w-full w-max">
-                   <button id="export-separate" class="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 transition-colors whitespace-nowrap flex items-center border-b border-gray-100">
-                     <i class="fas fa-copy mr-3 text-gray-500 w-4 text-center"></i>
-                     <span class="text-gray-700" data-i18n="exportMultipleFiles">导出多个文件</span>
-                   </button>
-                   <button id="export-merged" class="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 transition-colors whitespace-nowrap flex items-center">
-                     <i class="fas fa-compress-alt mr-3 text-gray-500 w-4 text-center"></i>
-                     <span class="text-gray-700" data-i18n="exportMergedDocument">合并为一个文档</span>
-                   </button>
-                 </div>
-              </div>
+              <button id="export-btn" class="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center justify-center">
+                <i class="fas fa-download mr-1.5"></i><span data-i18n="exportData">导出数据</span>
+              </button>
               <button id="clear-btn" class="w-12 bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors flex items-center justify-center">
                 <i class="fas fa-trash"></i>
               </button>
@@ -1100,7 +1145,7 @@
           </div>
           <div class="flex justify-between">
             <span data-i18n="author">作者</span>
-            <span class="font-medium">一泽Eze</span>
+            <span class="font-medium">Eze & Jack</span>
           </div>
           
           <!-- 新增链接区域 -->
