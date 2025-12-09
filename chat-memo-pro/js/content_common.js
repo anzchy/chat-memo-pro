@@ -837,6 +837,46 @@ function createSidebar() {
   sidebar.appendChild(header);
   sidebar.appendChild(content);
 
+  // 初始化可调整大小面板
+  if (typeof ResizablePanel !== 'undefined') {
+    const resizablePanel = new ResizablePanel(sidebar, {
+      minWidth: 320,
+      maxWidth: 800,
+      defaultWidth: 400,
+      handleWidth: 10 // 增加手柄宽度便于抓取
+    });
+    
+    // 重写保存/恢复宽度的逻辑，使用 chrome.storage
+    resizablePanel.saveWidth = function(width) {
+      try {
+        chrome.storage.local.set({ 'sidebar_width': width });
+      } catch (e) {
+        console.error('保存宽度失败:', e);
+      }
+    };
+    
+    resizablePanel.restoreWidth = function() {
+      try {
+        chrome.storage.local.get(['sidebar_width'], (result) => {
+          if (result.sidebar_width) {
+            const width = parseInt(result.sidebar_width, 10);
+            const validWidth = Math.max(this.options.minWidth, Math.min(this.options.maxWidth, width));
+            this.element.style.width = `${validWidth}px`;
+            this.updateResponsiveClasses(validWidth);
+          } else {
+            this.element.style.width = `${this.options.defaultWidth}px`;
+            this.updateResponsiveClasses(this.options.defaultWidth);
+          }
+        });
+      } catch (e) {
+        console.error('恢复宽度失败:', e);
+      }
+    };
+    
+    // 手动调用一次恢复，因为重写了方法
+    resizablePanel.restoreWidth();
+  }
+
   // 添加样式
   const style = document.createElement('style');
   style.textContent = `

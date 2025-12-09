@@ -871,6 +871,14 @@
           </div>
           <div class="flex items-center gap-1.5">
             <button 
+              id="sort-toggle" 
+              class="px-2 py-1 text-xs text-gray-500 rounded hover:bg-blue-100 hover:text-blue-700 focus:outline-none transition-all duration-200 flex items-center gap-1"
+              title="切换排序: 相关性/时间"
+            >
+              <i id="sort-icon" class="fas fa-calendar-alt text-xs"></i>
+              <span id="sort-label" class="hidden sm:inline">时间</span>
+            </button>
+            <button 
               id="multi-select-toggle" 
               class="px-2 py-1 text-xs text-gray-500 rounded hover:bg-blue-100 hover:text-blue-700 focus:outline-none transition-all duration-200 flex items-center gap-1"
               data-i18n-title="multiSelectMode"
@@ -1158,11 +1166,117 @@
     </div>
   </div>
 
+    <!-- 导出向导弹窗 -->
+    <div id="export-wizard-modal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg w-[500px] shadow-xl flex flex-col max-h-[90vh]">
+        <!-- Header -->
+        <div class="p-4 border-b flex justify-between items-center">
+          <h3 class="text-lg font-medium text-gray-900" data-i18n="exportWizard">导出向导</h3>
+          <button id="close-export-wizard" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 flex-1 overflow-y-auto">
+          <!-- Step 1: Time Range -->
+          <div id="export-step-1" class="wizard-step">
+            <h4 class="text-sm font-medium text-gray-700 mb-3" data-i18n="selectTimeRange">1. 选择时间范围</h4>
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              <button class="export-time-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all" data-value="all" data-i18n="allTime">全部时间</button>
+              <button class="export-time-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all" data-value="week" data-i18n="lastWeek">最近一周</button>
+              <button class="export-time-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all" data-value="month" data-i18n="lastMonth">最近一月</button>
+              <button class="export-time-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all" data-value="3months" data-i18n="last3Months">最近三月</button>
+              <button class="export-time-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all" data-value="year" data-i18n="lastYear">最近一年</button>
+              <button class="export-time-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all" data-value="custom" data-i18n="customRange">自定义</button>
+            </div>
+            
+            <div id="export-custom-date" class="hidden grid grid-cols-2 gap-3 mb-4 bg-gray-50 p-3 rounded-md">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1" data-i18n="startDate">开始日期</label>
+                <input type="date" id="export-start-date" class="w-full text-xs border rounded px-2 py-1">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1" data-i18n="endDate">结束日期</label>
+                <input type="date" id="export-end-date" class="w-full text-xs border rounded px-2 py-1">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Step 2: Export Mode -->
+          <div id="export-step-2" class="wizard-step mt-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-3" data-i18n="selectExportMode">2. 选择导出模式</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <button class="export-mode-option p-3 border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all flex flex-col items-center text-center" data-value="multiple">
+                <i class="fas fa-file-archive text-2xl text-gray-400 mb-2"></i>
+                <span class="text-xs font-medium" data-i18n="multipleFilesZIP">多文件 (ZIP)</span>
+                <span class="text-[10px] text-gray-500 mt-1">每个对话一个文件</span>
+              </button>
+              <button class="export-mode-option p-3 border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all flex flex-col items-center text-center" data-value="single">
+                <i class="fas fa-file-alt text-2xl text-gray-400 mb-2"></i>
+                <span class="text-xs font-medium" data-i18n="singleDocument">单文件</span>
+                <span class="text-[10px] text-gray-500 mt-1">合并所有对话</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Step 3: File Format -->
+          <div id="export-step-3" class="wizard-step mt-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-3" data-i18n="selectFileFormat">3. 选择文件格式</h4>
+            <div class="grid grid-cols-3 gap-2">
+              <button class="export-format-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all flex items-center justify-center" data-value="markdown">
+                <i class="fab fa-markdown mr-1.5"></i>Markdown
+              </button>
+              <button class="export-format-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all flex items-center justify-center" data-value="json">
+                <i class="fas fa-code mr-1.5"></i>JSON
+              </button>
+              <button class="export-format-option px-3 py-2 text-xs border rounded-md hover:bg-blue-50 hover:border-blue-500 transition-all flex items-center justify-center" data-value="txt">
+                <i class="fas fa-align-left mr-1.5"></i>Text
+              </button>
+            </div>
+          </div>
+          
+          <!-- Preview Card -->
+          <div id="export-preview" class="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <h4 class="text-xs font-medium text-blue-800 mb-2 flex items-center">
+              <i class="fas fa-info-circle mr-1.5"></i><span data-i18n="exportPreview">导出预览</span>
+            </h4>
+            <div class="text-xs text-blue-700 space-y-1">
+              <div class="flex justify-between">
+                <span data-i18n="conversationsCount">对话数量:</span>
+                <span id="preview-count" class="font-medium">0</span>
+              </div>
+              <div class="flex justify-between">
+                <span data-i18n="estimatedSize">预计大小:</span>
+                <span id="preview-size" class="font-medium">0 KB</span>
+              </div>
+              <div class="flex justify-between">
+                <span data-i18n="outputFormat">输出格式:</span>
+                <span id="preview-format" class="font-medium">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-4 border-t flex justify-end gap-3 bg-gray-50 rounded-b-lg">
+          <button id="cancel-export-wizard" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50" data-i18n="cancel">取消</button>
+          <button id="start-export-btn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center" disabled>
+            <i class="fas fa-download mr-1.5"></i>
+            <span data-i18n="startExport">开始导出</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
   <!-- Toast 容器 - 底部居中（排除侧边栏） -->
   <div id="toast-container" class="fixed bottom-6 z-50 pointer-events-none" style="left: calc(50% - 30px); transform: translateX(-50%);"></div>
 
   <script src="../js/i18n.js"></script>
   <script src="../js/core/compatibility.js"></script>
+  <script src="../lib/jszip.min.js"></script>
+  <script src="../lib/fuse.min.js"></script>
+  <script src="../js/resizable-panel.js"></script>
   <script src="../js/popup.js"></script>
 </body>
 </html>

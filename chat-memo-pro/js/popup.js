@@ -10,6 +10,8 @@ let currentConversationId = null;
 let allConversations = []; // 存储所有对话数据
 let filteredConversations = []; // 存储过滤后的对话数据
 let currentSearchTerm = ''; // 当前搜索词
+let fuse = null; // Fuse.js 实例
+let sortMode = 'date'; // 'date' or 'relevance'
 
 // 多选相关变量
 let isMultiSelectMode = false; // 是否处于多选模式
@@ -331,13 +333,13 @@ function registerEventListeners() {
   // 绑定分别导出按钮事件
   exportSeparateBtn.addEventListener('click', () => {
     exportDropdown.classList.add('hidden');
-    exportAllConversations('separate', elements.exportBtn); // 使用主按钮显示状态
+    openExportWizard('multiple');
   });
   
   // 绑定合并导出按钮事件
   exportMergedBtn.addEventListener('click', () => {
     exportDropdown.classList.add('hidden');  
-    exportAllConversations('merged', elements.exportBtn); // 使用主按钮显示状态
+    openExportWizard('single');
   });
   
   // 清空确认弹窗
@@ -347,6 +349,12 @@ function registerEventListeners() {
   // 搜索功能
   elements.searchInput.addEventListener('input', handleSearchInput);
   elements.clearSearch.addEventListener('click', clearSearchInput);
+  
+  // 排序切换
+  const sortToggle = document.getElementById('sort-toggle');
+  if (sortToggle) {
+    sortToggle.addEventListener('click', toggleSortMode);
+  }
   
   // 多选模式切换
   elements.multiSelectToggle.addEventListener('click', toggleMultiSelectMode);
@@ -546,6 +554,9 @@ function loadConversations() {
       // 存储所有对话数据
       allConversations = response.conversations;
       
+      // 初始化模糊搜索
+      initializeFuzzySearch(allConversations);
+      
       // 应用当前搜索过滤
       performSearch(currentSearchTerm);
     } else {
@@ -593,19 +604,52 @@ function createConversationCard(conversation) {
   
   // 如果有搜索词，显示搜索命中的片段；否则显示最后一条消息
   let summaryText;
+  let safeTitle = escapeHtml(titleText);
+  let safeSummary = '';
+
   if (currentSearchTerm && conversation.messages) {
-    // 查找包含搜索词的消息片段
-    summaryText = findMatchingSnippet(conversation, currentSearchTerm);
+    if (conversation._matches) {
+      // 使用 Fuse.js 的匹配结果进行高亮
+      const titleMatch = conversation._matches.find(m => m.key === 'title');
+      const contentMatches = conversation._matches.filter(m => m.key === 'messages.content');
+      
+      // 1. 处理标题高亮
+      if (titleMatch) {
+        safeTitle = highlightFuseMatches(titleText, titleMatch.indices);
+      } else {
+        // 降级到正则高亮 (防止 fuzzy 漏掉)
+        safeTitle = highlightSearchTerm(titleText, currentSearchTerm);
+      }
+      
+      // 2. 处理摘要和内容高亮
+      if (contentMatches.length > 0) {
+        // 找到最佳匹配片段 (score 越低越好，但 matches 里没有 score，我们取第一个或最长匹配)
+        // Fuse returns matches in order.
+        const bestMatch = contentMatches[0];
+        // bestMatch.value 是完整的消息内容
+        summaryText = extractSnippetFromFuseMatch(bestMatch.value, bestMatch.indices);
+        safeSummary = highlightFuseMatches(summaryText.text, summaryText.indices);
+      } else {
+        // 如果没有内容匹配 (可能匹配了 thinking)，显示最后一条消息或标题匹配
+        summaryText = lastMessage 
+          ? lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : '')
+          : i18n('noContent');
+        safeSummary = highlightSearchTerm(summaryText, currentSearchTerm);
+      }
+    } else {
+      // 旧的普通搜索逻辑
+      // 查找包含搜索词的消息片段
+      summaryText = findMatchingSnippet(conversation, currentSearchTerm);
+      safeTitle = highlightSearchTerm(titleText, currentSearchTerm);
+      safeSummary = highlightSearchTerm(summaryText, currentSearchTerm);
+    }
   } else {
     // 默认显示最后一条消息
     summaryText = lastMessage 
       ? lastMessage.content.substring(0, 100) + (lastMessage.content.length > 100 ? '...' : '')
       : i18n('noContent');
+    safeSummary = escapeHtml(summaryText);
   }
-  
-  // 如果有搜索词，则高亮显示，否则正常转义
-  const safeTitle = currentSearchTerm ? highlightSearchTerm(titleText, currentSearchTerm) : escapeHtml(titleText);
-  const safeSummary = currentSearchTerm ? highlightSearchTerm(summaryText, currentSearchTerm) : escapeHtml(summaryText);
   
   // 判断是否选中状态
   const isSelected = selectedConversations.has(conversation.conversationId);
@@ -1949,9 +1993,91 @@ function extractSnippetAroundKeywords(content, keywords) {
 }
 
 /**
- * 设置版本号显示
- * 从 manifest.json 获取版本号并显示在设置页面
+ * Highlight text using Fuse.js indices
+ * @param {string} text - 原始文本
+ * @param {Array} indices - 匹配索引数组 [[start, end], ...]
+ * @returns {string} - 高亮后的 HTML
  */
+function highlightFuseMatches(text, indices) {
+  if (!indices || indices.length === 0) return escapeHtml(text);
+  
+  let result = '';
+  let lastIndex = 0;
+  
+  // 排序索引以防万一
+  indices.sort((a, b) => a[0] - b[0]);
+  
+  indices.forEach(([start, end]) => {
+    // 添加非匹配部分
+    result += escapeHtml(text.substring(lastIndex, start));
+    
+    // 添加匹配部分 (加高亮)
+    // end 是包含的，所以 substring 需要 end + 1
+    result += `<mark class="bg-yellow-200 rounded-sm px-0.5">${escapeHtml(text.substring(start, end + 1))}</mark>`;
+    
+    lastIndex = end + 1;
+  });
+  
+  // 添加剩余部分
+  result += escapeHtml(text.substring(lastIndex));
+  
+  return result;
+}
+
+/**
+ * 从 Fuse 匹配中提取最佳片段
+ * @param {string} text - 完整文本
+ * @param {Array} indices - 匹配索引
+ * @returns {Object} - { text: string, indices: Array } adjusted indices for the snippet
+ */
+function extractSnippetFromFuseMatch(text, indices) {
+  const maxSnippetLength = 100;
+  const contextLength = 20;
+  
+  if (!indices || indices.length === 0) {
+    return { 
+      text: text.substring(0, maxSnippetLength) + (text.length > maxSnippetLength ? '...' : ''), 
+      indices: [] 
+    };
+  }
+  
+  // 取第一个匹配 (通常是最相关的)
+  const [start, end] = indices[0];
+  const matchLength = end - start + 1;
+  
+  // 计算片段范围
+  let snippetStart = Math.max(0, start - contextLength);
+  let snippetEnd = Math.min(text.length, end + contextLength + Math.max(0, maxSnippetLength - matchLength - contextLength * 2));
+  
+  // 确保片段长度不超过最大限制
+  if (snippetEnd - snippetStart > maxSnippetLength) {
+    snippetEnd = snippetStart + maxSnippetLength;
+  }
+  
+  let snippet = text.substring(snippetStart, snippetEnd);
+  
+  // 添加省略号
+  if (snippetStart > 0) snippet = '...' + snippet;
+  if (snippetEnd < text.length) snippet = snippet + '...';
+  
+  // 调整索引以匹配片段
+  // 需要重新计算所有落在片段内的索引
+  const adjustedIndices = [];
+  const offset = snippetStart - (snippetStart > 0 ? 3 : 0); // 3 is length of '...'
+  
+  indices.forEach(([s, e]) => {
+    if (e >= snippetStart && s < snippetEnd) {
+      // 裁剪索引到片段范围内
+      const newS = Math.max(s, snippetStart) - snippetStart + (snippetStart > 0 ? 3 : 0);
+      const newE = Math.min(e, snippetEnd - 1) - snippetStart + (snippetStart > 0 ? 3 : 0);
+      if (newE >= newS) {
+        adjustedIndices.push([newS, newE]);
+      }
+    }
+  });
+  
+  return { text: snippet, indices: adjustedIndices };
+}
 function setVersionNumber() {
   try {
     // 获取扩展的 manifest 信息
@@ -2513,92 +2639,181 @@ function updateQuickDateButtons() {
 }
 
 /**
+ * 初始化模糊搜索
+ * @param {Array} conversations - 对话数组
+ */
+function initializeFuzzySearch(conversations) {
+  const options = {
+    keys: [
+      { name: 'title', weight: 2 },
+      { name: 'messages.content', weight: 1 },
+      { name: 'messages.thinking', weight: 0.5 }
+    ],
+    threshold: 0.3, // 匹配阈值，越低越精确
+    includeMatches: true,
+    includeScore: true,
+    minMatchCharLength: 2,
+    ignoreLocation: true,
+    useExtendedSearch: true
+  };
+  fuse = new Fuse(conversations, options);
+}
+
+/**
+ * 切换排序模式
+ */
+function toggleSortMode() {
+  if (sortMode === 'date') {
+    sortMode = 'relevance';
+  } else {
+    sortMode = 'date';
+  }
+  
+  // 更新UI
+  updateSortToggleUI();
+  
+  // 重新执行搜索和筛选
+  performSearchAndFilter();
+}
+
+/**
+ * 更新排序切换按钮UI
+ */
+function updateSortToggleUI() {
+  const sortIcon = document.getElementById('sort-icon');
+  const sortLabel = document.getElementById('sort-label');
+  
+  if (sortMode === 'relevance') {
+    sortIcon.className = 'fas fa-sort-amount-down text-xs';
+    if (sortLabel) sortLabel.textContent = '相关度'; // Relevance
+  } else {
+    sortIcon.className = 'fas fa-calendar-alt text-xs';
+    if (sortLabel) sortLabel.textContent = '时间'; // Date
+  }
+}
+
+/**
  * 执行搜索和筛选
  */
 function performSearchAndFilter() {
-  let conversations = [...allConversations];
+  let results = [];
   
-  // 应用筛选
-  conversations = applyFilterToConversations(conversations);
-  
-  // 应用搜索
+  // 1. 搜索 (Fuzzy or Normal)
   if (currentSearchTerm) {
-    conversations = searchConversations(conversations, currentSearchTerm);
+    if (fuse) {
+      // 使用 Fuse.js 进行模糊搜索
+      const fuseResults = fuse.search(currentSearchTerm);
+      // fuseResults 是 [{item, score, matches}, ...]
+      
+      // 过滤结果并保留匹配信息
+      results = fuseResults
+        .filter(res => checkConversationMatchesFilter(res.item))
+        .map(res => {
+          // 将匹配信息附加到对话对象上 (临时)
+          res.item._matches = res.matches;
+          res.item._score = res.score;
+          return res.item;
+        });
+        
+      // 如果没有结果且搜索词很短，尝试普通搜索作为回退
+      if (results.length === 0 && currentSearchTerm.length < 2) {
+         results = searchConversations(allConversations, currentSearchTerm)
+           .filter(conv => checkConversationMatchesFilter(conv));
+      }
+    } else {
+      // 回退到普通搜索
+      results = searchConversations(allConversations, currentSearchTerm)
+        .filter(conv => checkConversationMatchesFilter(conv));
+    }
+  } else {
+    // 没有搜索词，仅筛选
+    results = allConversations.filter(conv => checkConversationMatchesFilter(conv));
+    // 清除临时的匹配信息
+    results.forEach(conv => {
+      delete conv._matches;
+      delete conv._score;
+    });
+  }
+  
+  // 2. 排序
+  if (currentSearchTerm && sortMode === 'relevance') {
+    // 按相关度排序 (score 越小越相关)
+    results.sort((a, b) => (a._score || 1) - (b._score || 1));
+  } else {
+    // 按时间排序 (默认)
+    results.sort((a, b) => {
+      const timeA = new Date(getCompatibleTime(a));
+      const timeB = new Date(getCompatibleTime(b));
+      return timeB - timeA;
+    });
   }
   
   // 更新过滤后的对话列表
-  filteredConversations = conversations;
+  filteredConversations = results;
   
   // 渲染结果
   renderFilteredConversations();
 }
 
 /**
- * 对对话列表应用筛选条件
- * @param {Array} conversations - 对话数组
- * @returns {Array} - 筛选后的对话数组
+ * 检查单个对话是否符合筛选条件
+ * @param {Object} conversation - 对话对象
+ * @returns {boolean} - 是否符合条件
  */
-function applyFilterToConversations(conversations) {
-  return conversations.filter(conversation => {
-    // 日期筛选
-    if (currentFilter.startDate || currentFilter.endDate) {
-      // 使用正确的日期字段，优先级：updatedAt > createdAt > 最后一条消息时间
-      let conversationDate;
-      
-      if (conversation.updatedAt) {
-        conversationDate = new Date(conversation.updatedAt);
-      } else if (conversation.createdAt) {
-        conversationDate = new Date(conversation.createdAt);
-      } else if (conversation.messages && conversation.messages.length > 0) {
-        // 如果没有创建/更新时间，使用最后一条消息的时间
-        const lastMessage = conversation.messages[conversation.messages.length - 1];
-        conversationDate = new Date(lastMessage.timestamp);
-      } else {
-        // 如果所有字段都没有，尝试使用旧字段名
-        conversationDate = new Date(conversation.updated || conversation.created || Date.now());
-      }
-      
-      // 输出调试日志，查看对话日期和筛选日期
-      console.log('Conversation date:', conversationDate, 
-                'Fields:', {
-                  updatedAt: conversation.updatedAt,
-                  createdAt: conversation.createdAt,
-                  updated: conversation.updated,
-                  created: conversation.created
-                });
-      
-      if (currentFilter.startDate) {
-        const startDate = new Date(currentFilter.startDate);
-        console.log('Start date filter:', startDate);
-        if (conversationDate < startDate) {
-          return false;
-        }
-      }
-      
-      if (currentFilter.endDate) {
-        const endDate = new Date(currentFilter.endDate);
-        // 设置结束日期为当天的23:59:59
-        endDate.setHours(23, 59, 59, 999);
-        console.log('End date filter:', endDate);
-        if (conversationDate > endDate) {
-          return false;
-        }
-      }
+function checkConversationMatchesFilter(conversation) {
+  // 日期筛选
+  if (currentFilter.startDate || currentFilter.endDate) {
+    // 使用正确的日期字段，优先级：updatedAt > createdAt > 最后一条消息时间
+    let conversationDate;
+    
+    if (conversation.updatedAt) {
+      conversationDate = new Date(conversation.updatedAt);
+    } else if (conversation.createdAt) {
+      conversationDate = new Date(conversation.createdAt);
+    } else if (conversation.messages && conversation.messages.length > 0) {
+      // 如果没有创建/更新时间，使用最后一条消息的时间
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      conversationDate = new Date(lastMessage.timestamp);
+    } else {
+      // 如果所有字段都没有，尝试使用旧字段名
+      conversationDate = new Date(conversation.updated || conversation.created || Date.now());
     }
     
-    // 平台筛选
-    if (currentFilter.platforms.length > 0) {
-      const conversationPlatform = conversation.platform || getPlatformFromUrl(conversation.url);
-      
-      // 平台筛选逐步调试已完成
-      
-      if (!currentFilter.platforms.includes(conversationPlatform)) {
+    if (currentFilter.startDate) {
+      const startDate = new Date(currentFilter.startDate);
+      if (conversationDate < startDate) {
         return false;
       }
     }
     
-    return true;
-  });
+    if (currentFilter.endDate) {
+      const endDate = new Date(currentFilter.endDate);
+      // 设置结束日期为当天的23:59:59
+      endDate.setHours(23, 59, 59, 999);
+      if (conversationDate > endDate) {
+        return false;
+      }
+    }
+  }
+  
+  // 平台筛选
+  if (currentFilter.platforms.length > 0) {
+    const conversationPlatform = conversation.platform || getPlatformFromUrl(conversation.url);
+    if (!currentFilter.platforms.includes(conversationPlatform)) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * 对对话列表应用筛选条件 (已弃用，保留兼容性)
+ * @param {Array} conversations - 对话数组
+ * @returns {Array} - 筛选后的对话数组
+ */
+function applyFilterToConversations(conversations) {
+  return conversations.filter(conversation => checkConversationMatchesFilter(conversation));
 }
 
 /**
@@ -3400,6 +3615,501 @@ function updateExportButtonText() {
     elements.exportFilteredBtn.innerHTML = `<i class="fas fa-download text-xs"></i><span>${chrome.i18n.getMessage('export')}</span><i class="fas fa-chevron-down text-xs"></i>`;
     elements.exportFilteredBtn.title = chrome.i18n.getMessage('exportFilterResults');
   }
+}
+
+// ==================== 导出向导逻辑 ====================
+
+/**
+ * 导出向导管理器
+ * 负责处理导出向导的状态管理和UI交互
+ */
+const exportWizard = {
+  /**
+   * 向导状态
+   */
+  state: {
+    timeRange: 'all', // all, week, month, 3months, year, custom
+    customStartDate: '',
+    customEndDate: '',
+    mode: 'multiple', // multiple, single
+    format: 'markdown', // markdown, json, txt
+    filteredConversations: []
+  },
+  
+  /**
+   * UI元素引用
+   */
+  elements: {
+    modal: document.getElementById('export-wizard-modal'),
+    closeBtn: document.getElementById('close-export-wizard'),
+    cancelBtn: document.getElementById('cancel-export-wizard'),
+    startBtn: document.getElementById('start-export-btn'),
+    
+    // Time Range
+    timeOptions: document.querySelectorAll('.export-time-option'),
+    customDateContainer: document.getElementById('export-custom-date'),
+    startDateInput: document.getElementById('export-start-date'),
+    endDateInput: document.getElementById('export-end-date'),
+    
+    // Mode
+    modeOptions: document.querySelectorAll('.export-mode-option'),
+    
+    // Format
+    formatOptions: document.querySelectorAll('.export-format-option'),
+    
+    // Preview
+    previewCount: document.getElementById('preview-count'),
+    previewSize: document.getElementById('preview-size'),
+    previewFormat: document.getElementById('preview-format')
+  },
+  
+  /**
+   * 初始化向导
+   */
+  init() {
+    this.bindEvents();
+    // 初始化默认状态
+    this.selectTimeRange('all');
+    this.selectMode('multiple');
+    this.selectFormat('markdown');
+  },
+  
+  /**
+   * 绑定DOM事件
+   */
+  bindEvents() {
+    // Close buttons
+    this.elements.closeBtn.addEventListener('click', () => this.close());
+    this.elements.cancelBtn.addEventListener('click', () => this.close());
+    
+    // Start Export
+    this.elements.startBtn.addEventListener('click', () => this.startExport());
+    
+    // Time Range Options
+    this.elements.timeOptions.forEach(btn => {
+      btn.addEventListener('click', () => this.selectTimeRange(btn.dataset.value));
+    });
+    
+    // Custom Date Inputs
+    this.elements.startDateInput.addEventListener('change', (e) => {
+      this.state.customStartDate = e.target.value;
+      this.updatePreview();
+      this.validateForm();
+    });
+    this.elements.endDateInput.addEventListener('change', (e) => {
+      this.state.customEndDate = e.target.value;
+      this.updatePreview();
+      this.validateForm();
+    });
+    
+    // Mode Options
+    this.elements.modeOptions.forEach(btn => {
+      btn.addEventListener('click', () => this.selectMode(btn.dataset.value));
+    });
+    
+    // Format Options
+    this.elements.formatOptions.forEach(btn => {
+      btn.addEventListener('click', () => this.selectFormat(btn.dataset.value));
+    });
+  },
+  
+  /**
+   * 打开向导
+   * @param {string} [initialMode='multiple'] - 初始导出模式
+   */
+  open(initialMode = 'multiple') {
+    this.selectMode(initialMode);
+    this.updatePreview();
+    this.validateForm();
+    this.elements.modal.classList.remove('hidden');
+  },
+  
+  /**
+   * 关闭向导
+   */
+  close() {
+    this.elements.modal.classList.add('hidden');
+  },
+  
+  /**
+   * 选择时间范围
+   * @param {string} range - 时间范围标识 ('all', 'week', 'month', etc.)
+   */
+  selectTimeRange(range) {
+    this.state.timeRange = range;
+    
+    // Update UI
+    this.elements.timeOptions.forEach(btn => {
+      if (btn.dataset.value === range) {
+        btn.classList.add('bg-blue-50', 'border-blue-500', 'text-blue-700');
+      } else {
+        btn.classList.remove('bg-blue-50', 'border-blue-500', 'text-blue-700');
+      }
+    });
+    
+    // Show/Hide Custom Date Inputs
+    if (range === 'custom') {
+      this.elements.customDateContainer.classList.remove('hidden');
+    } else {
+      this.elements.customDateContainer.classList.add('hidden');
+    }
+    
+    this.updatePreview();
+    this.validateForm();
+  },
+  
+  /**
+   * 选择导出模式
+   * @param {string} mode - 导出模式 ('multiple', 'single')
+   */
+  selectMode(mode) {
+    this.state.mode = mode;
+    
+    // Update UI
+    this.elements.modeOptions.forEach(btn => {
+      if (btn.dataset.value === mode) {
+        btn.classList.add('bg-blue-50', 'border-blue-500', 'text-blue-700');
+        btn.querySelector('i').classList.replace('text-gray-400', 'text-blue-500');
+      } else {
+        btn.classList.remove('bg-blue-50', 'border-blue-500', 'text-blue-700');
+        btn.querySelector('i').classList.replace('text-blue-500', 'text-gray-400');
+      }
+    });
+    
+    this.updatePreview();
+  },
+  
+  /**
+   * 选择文件格式
+   * @param {string} format - 文件格式 ('markdown', 'json', 'txt')
+   */
+  selectFormat(format) {
+    this.state.format = format;
+    
+    // Update UI
+    this.elements.formatOptions.forEach(btn => {
+      if (btn.dataset.value === format) {
+        btn.classList.add('bg-blue-50', 'border-blue-500', 'text-blue-700');
+        btn.querySelector('i').classList.replace('text-gray-400', 'text-blue-500');
+        // Handle icon color specifically for different icons if needed
+      } else {
+        btn.classList.remove('bg-blue-50', 'border-blue-500', 'text-blue-700');
+        // btn.querySelector('i').classList.replace('text-blue-500', 'text-gray-400');
+      }
+    });
+    
+    this.updatePreview();
+  },
+  
+  /**
+   * 验证表单状态
+   * @returns {boolean} - 是否有效
+   */
+  validateForm() {
+    let isValid = true;
+    
+    if (this.state.timeRange === 'custom') {
+      if (!this.state.customStartDate || !this.state.customEndDate) {
+        isValid = false;
+      } else if (new Date(this.state.customStartDate) > new Date(this.state.customEndDate)) {
+        isValid = false;
+      }
+    }
+    
+    if (this.state.filteredConversations.length === 0) {
+      isValid = false;
+    }
+    
+    this.elements.startBtn.disabled = !isValid;
+    if (isValid) {
+      this.elements.startBtn.classList.remove('bg-blue-300', 'cursor-not-allowed');
+      this.elements.startBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+    } else {
+      this.elements.startBtn.classList.add('bg-blue-300', 'cursor-not-allowed');
+      this.elements.startBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+    }
+    
+    return isValid;
+  },
+  
+  /**
+   * 计算日期范围
+   * @returns {Object} - { start: Date|null, end: Date }
+   */
+  calculateDateRange() {
+    const now = new Date();
+    let start = null;
+    let end = now;
+    
+    switch (this.state.timeRange) {
+      case 'week':
+        start = new Date(now);
+        start.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        start = new Date(now);
+        start.setMonth(now.getMonth() - 1);
+        break;
+      case '3months':
+        start = new Date(now);
+        start.setMonth(now.getMonth() - 3);
+        break;
+      case 'year':
+        start = new Date(now);
+        start.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'custom':
+        if (this.state.customStartDate) start = new Date(this.state.customStartDate);
+        if (this.state.customEndDate) {
+          end = new Date(this.state.customEndDate);
+          end.setHours(23, 59, 59, 999);
+        }
+        break;
+      case 'all':
+      default:
+        start = new Date(0); // Beginning of time
+        break;
+    }
+    
+    return { start, end };
+  },
+  
+  /**
+   * 更新预览信息
+   */
+  updatePreview() {
+    const range = this.calculateDateRange();
+    
+    // Filter conversations based on range
+    this.state.filteredConversations = allConversations.filter(conv => {
+      const convDate = new Date(getCompatibleTime(conv));
+      return convDate >= range.start && convDate <= range.end;
+    });
+    
+    // Update count
+    this.elements.previewCount.textContent = this.state.filteredConversations.length;
+    
+    // Update estimated size
+    const size = this.estimateSize(this.state.filteredConversations);
+    this.elements.previewSize.textContent = formatBytes(size);
+    
+    // Update format display
+    let formatText = '';
+    switch(this.state.format) {
+      case 'markdown': formatText = 'Markdown (.md)'; break;
+      case 'json': formatText = 'JSON (.json)'; break;
+      case 'txt': formatText = 'Plain Text (.txt)'; break;
+    }
+    
+    if (this.state.mode === 'multiple') {
+      formatText += ' (ZIP Archive)';
+    }
+    
+    this.elements.previewFormat.textContent = formatText;
+    
+    this.validateForm();
+  },
+  
+  /**
+   * 估算导出文件大小
+   * @param {Array} conversations - 对话数组
+   * @returns {number} - 估算的字节数
+   */
+  estimateSize(conversations) {
+    // Rough estimation: JSON string length
+    let totalChars = 0;
+    // Sample first 10 to estimate average if too many
+    if (conversations.length > 50) {
+        const sample = conversations.slice(0, 10);
+        const sampleSize = JSON.stringify(sample).length;
+        totalChars = (sampleSize / 10) * conversations.length;
+    } else {
+        totalChars = JSON.stringify(conversations).length;
+    }
+    return totalChars; // in bytes
+  },
+  
+  /**
+   * 开始导出流程
+   */
+  startExport() {
+    const conversationIds = this.state.filteredConversations.map(c => c.conversationId);
+    
+    // Metadata for export filename or logging
+    const metadata = {
+      exportMode: 'wizard',
+      timeRange: this.state.timeRange,
+      format: this.state.format,
+      mode: this.state.mode,
+      totalCount: conversationIds.length
+    };
+    
+    const buttonManager = new ExportButtonManager(this.elements.startBtn);
+    buttonManager.setLoading();
+    
+    // Use new specialized export function
+    exportConversationsAdvanced(conversationIds, this.state.mode, this.state.format, metadata)
+      .then(() => {
+        buttonManager.setSuccess();
+        setTimeout(() => this.close(), 1500);
+      })
+      .catch(err => {
+        console.error("Export failed", err);
+        buttonManager.setError();
+      });
+  }
+};
+
+/**
+ * Helper to open the wizard
+ */
+function openExportWizard(initialMode) {
+  // Ensure wizard is initialized
+  if (!exportWizard.initialized) {
+    exportWizard.init();
+    exportWizard.initialized = true;
+  }
+  exportWizard.open(initialMode);
+}
+
+/**
+ * Advanced export function handling different formats and modes locally in popup
+ * This replaces the simple background `exportConversationsByRange` for wizard use
+ * to give more control over formatting on the client side (JSZip, etc.)
+ */
+async function exportConversationsAdvanced(conversationIds, mode, format, metadata) {
+  // Get full conversation details if not already fully loaded (though allConversations usually has them)
+  // For now assume allConversations is populated and up to date as per loadConversations()
+  
+  // Filter from allConversations to ensure we have the objects
+  const conversationsToExport = allConversations.filter(c => conversationIds.includes(c.conversationId));
+  
+  if (mode === 'single') {
+    // Single merged file
+    let content = '';
+    let filename = `chat-memo_export_${formatDateForFilename(new Date())}`;
+    
+    if (format === 'json') {
+      content = exportAsJSON(conversationsToExport);
+      filename += '.json';
+    } else if (format === 'markdown') {
+      content = exportAsMarkdown(conversationsToExport, true); // true = merged
+      filename += '.md';
+    } else { // txt
+      content = exportAsPlainText(conversationsToExport, true);
+      filename += '.txt';
+    }
+    
+    downloadFile(content, filename, format === 'json' ? 'application/json' : 'text/plain');
+    
+  } else {
+    // Multiple files (ZIP)
+    const zip = new JSZip();
+    
+    conversationsToExport.forEach(conv => {
+      let content = '';
+      let ext = '';
+      
+      if (format === 'json') {
+        content = JSON.stringify(conv, null, 2);
+        ext = 'json';
+      } else if (format === 'markdown') {
+        content = exportAsMarkdown([conv], false);
+        ext = 'md';
+      } else {
+        content = exportAsPlainText([conv], false);
+        ext = 'txt';
+      }
+      
+      const safeTitle = sanitizeFilename(conv.title || 'untitled');
+      const dateStr = formatDateForFilename(new Date(getCompatibleTime(conv)));
+      const filename = `${conv.platform}_${dateStr}_${safeTitle}.${ext}`;
+      
+      zip.file(filename, content);
+    });
+    
+    const zipContent = await zip.generateAsync({type: 'blob'});
+    const zipFilename = `chat-memo_export_${formatDateForFilename(new Date())}.zip`;
+    
+    // Trigger download
+    const url = URL.createObjectURL(zipContent);
+    chrome.downloads.download({
+      url: url,
+      filename: zipFilename,
+      saveAs: true
+    });
+  }
+}
+
+function formatDateForFilename(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${y}${m}${d}_${h}${min}`;
+}
+
+function sanitizeFilename(name) {
+  return name.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_').substring(0, 50);
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], {type: mimeType});
+  const url = URL.createObjectURL(blob);
+  chrome.downloads.download({
+    url: url,
+    filename: filename,
+    saveAs: true
+  });
+}
+
+// Placeholder export format functions - to be implemented fully in next steps
+function exportAsJSON(conversations) {
+  return JSON.stringify({
+    meta: {
+      exportedAt: new Date().toISOString(),
+      count: conversations.length,
+      version: "1.0"
+    },
+    data: conversations
+  }, null, 2);
+}
+
+function exportAsMarkdown(conversations, isMerged) {
+  return conversations.map(conv => {
+    const date = new Date(getCompatibleTime(conv)).toLocaleString();
+    let md = `---\ntitle: ${conv.title}\nplatform: ${conv.platform}\ndate: ${date}\nurl: ${conv.link}\n---\n\n# ${conv.title}\n\n`;
+    
+    conv.messages.forEach(msg => {
+      const role = msg.sender === 'user' ? 'User' : 'AI';
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+      
+      md += `### ${role} ${time ? `(${time})` : ''}\n\n`;
+      
+      if (msg.sender === 'AI' && msg.thinking) {
+        md += `<details>\n<summary>Thinking Process</summary>\n\n${msg.thinking}\n\n</details>\n\n`;
+      }
+      
+      md += `${msg.content}\n\n`;
+    });
+    
+    return md;
+  }).join(isMerged ? '\n\n---\n\n' : '');
+}
+
+function exportAsPlainText(conversations, isMerged) {
+  return conversations.map(conv => {
+    const date = new Date(getCompatibleTime(conv)).toLocaleString();
+    let txt = `Title: ${conv.title}\nPlatform: ${conv.platform}\nDate: ${date}\nURL: ${conv.link}\n${'='.repeat(50)}\n\n`;
+    
+    conv.messages.forEach(msg => {
+      const role = msg.sender === 'user' ? 'User' : 'AI';
+      txt += `[${role}]:\n${msg.content}\n\n${'-'.repeat(20)}\n\n`;
+    });
+    
+    return txt;
+  }).join(isMerged ? '\n\n==================================================\n\n' : '');
 }
 
 /**

@@ -6,6 +6,9 @@
  */
 
 class ManusAdapter extends BasePlatformAdapter {
+  /**
+   * 构造函数
+   */
   constructor() {
     super('manus');
     this.lastExtractedContent = '';
@@ -242,6 +245,12 @@ class ManusAdapter extends BasePlatformAdapter {
    * @returns {string} - 提取的标题
    */
   extractTitle() {
+    // 尝试从页面UI提取对话标题
+    const titleElement = document.querySelector('.text-base.font-medium.truncate');
+    if (titleElement) {
+      return titleElement.innerText.trim();
+    }
+
     // 尝试从页面标题提取
     const title = document.title;
     if (title && !title.includes('Manus')) {

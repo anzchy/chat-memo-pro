@@ -12,7 +12,7 @@
    },
    "content_scripts": [ {
       "css": [ "css/content.css" ],
-      "js": [ "js/content_common.js" ],
+      "js": [ "js/resizable-panel.js", "js/content_common.js" ],
       "matches": [ "\u003Call_urls>" ]
    }, {
       "js": [ "js/core/compatibility.js", "js/core/storage-manager.js", "js/core/base.js", "js/adapters/deepseek.js" ],

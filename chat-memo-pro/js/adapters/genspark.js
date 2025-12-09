@@ -6,6 +6,9 @@
  */
 
 class GensparkAdapter extends BasePlatformAdapter {
+  /**
+   * 构造函数
+   */
   constructor() {
     super('genspark');
   }
@@ -149,6 +152,7 @@ class GensparkAdapter extends BasePlatformAdapter {
    * 从提供的HTML看，Copy/Deep Research按钮在 bubble 外，innerText应该比较干净
    * 但可以保留一些通用过滤
    * @param {string} text 
+   * @returns {boolean} - 是否为UI元素
    */
   isUIElement(text) {
     const uiPatterns = [
@@ -157,19 +161,15 @@ class GensparkAdapter extends BasePlatformAdapter {
     return uiPatterns.some(pattern => text === pattern || text.includes(pattern + ' ')); // Check for exact match or pattern followed by space
   }
 
-
-
-
-
   /**
    * 提取标题
    * @returns {string} - 提取的标题
    */
   extractTitle() {
-    // 尝试从页面标题提取
-    const title = document.title;
-    if (title && !title.includes('Genspark')) {
-      return title;
+    // 尝试从输入框提取 (agent name)
+    const nameInput = document.querySelector('input.agent-name-input');
+    if (nameInput && nameInput.value) {
+      return nameInput.value.trim();
     }
 
     // 尝试从页面中查找标题元素
@@ -177,6 +177,12 @@ class GensparkAdapter extends BasePlatformAdapter {
                         document.querySelector('[class*="title"]');
     if (titleElement) {
       return titleElement.innerText.trim();
+    }
+
+    // 尝试从页面标题提取
+    const title = document.title;
+    if (title && !title.includes('Genspark')) {
+      return title;
     }
 
     return 'Genspark Conversation';

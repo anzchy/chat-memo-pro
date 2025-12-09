@@ -110,20 +110,20 @@
 
 ### Library Integration for User Story 2
 
-- [ ] T040 [P] [US2] Download Fuse.js v7.0.0 or compatible version to `chat-memo-pro/lib/fuse.min.js`
-- [ ] T041 [US2] Add Fuse.js script tag to `chat-memo-pro/html/popup.html` before popup.js: `<script src="../lib/fuse.min.js"></script>`
+- [X] T040 [P] [US2] Download Fuse.js v7.0.0 or compatible version to `chat-memo-pro/lib/fuse.min.js`
+- [X] T041 [US2] Add Fuse.js script tag to `chat-memo-pro/html/popup.html` before popup.js: `<script src="../lib/fuse.min.js"></script>`
 
 ### Implementation for User Story 2
 
-- [ ] T042 [US2] Create initializeFuzzySearch() function in `chat-memo-pro/js/popup.js` with Fuse configuration: keys: [{ name: 'title', weight: 2 }, { name: 'messages.content', weight: 1 }, { name: 'messages.thinking', weight: 0.5 }], threshold: 0.3, includeMatches: true, includeScore: true, minMatchCharLength: 2
-- [ ] T043 [US2] Create performFuzzySearch() function in popup.js to execute Fuse search and return results with matches and scores
-- [ ] T044 [US2] Create highlightMatches() function in popup.js to wrap matching text in `<mark class="highlight">` tags
-- [ ] T045 [US2] Implement sort by relevance logic in popup.js to sort results by Fuse score (lower = better match)
-- [ ] T046 [US2] Update applyFilters() function in popup.js to use AND logic combining: fuzzy keyword match + date range (Unix timestamps) + platform selection
-- [ ] T047 [US2] Implement date range filtering using Unix timestamps (milliseconds) for consistent cross-browser comparison
-- [ ] T048 [US2] Add search results rendering logic in popup.js to display highlighted keywords in conversation cards
-- [ ] T049 [US2] Add sort toggle UI in popup.html for "Sort by Relevance" vs "Sort by Date" options
-- [ ] T050 [US2] Add CSS styles to popup.html for `.highlight` class: background-color #fef08a, color #000, padding 0 2px, border-radius 2px, font-weight 500
+- [X] T042 [US2] Create initializeFuzzySearch() function in `chat-memo-pro/js/popup.js` with Fuse configuration: keys: [{ name: 'title', weight: 2 }, { name: 'messages.content', weight: 1 }, { name: 'messages.thinking', weight: 0.5 }], threshold: 0.3, includeMatches: true, includeScore: true, minMatchCharLength: 2
+- [X] T043 [US2] Create performFuzzySearch() function in popup.js to execute Fuse search and return results with matches and scores
+- [X] T044 [US2] Create highlightMatches() function in popup.js to wrap matching text in `<mark class="highlight">` tags
+- [X] T045 [US2] Implement sort by relevance logic in popup.js to sort results by Fuse score (lower = better match)
+- [X] T046 [US2] Update applyFilters() function in popup.js to use AND logic combining: fuzzy keyword match + date range (Unix timestamps) + platform selection
+- [X] T047 [US2] Implement date range filtering using Unix timestamps (milliseconds) for consistent cross-browser comparison
+- [X] T048 [US2] Add search results rendering logic in popup.js to display highlighted keywords in conversation cards
+- [X] T049 [US2] Add sort toggle UI in popup.html for "Sort by Relevance" vs "Sort by Date" options
+- [X] T050 [US2] Add CSS styles to popup.html for `.highlight` class: background-color #fef08a, color #000, padding 0 2px, border-radius 2px, font-weight 500
 
 **Checkpoint**: User Story 2 complete - Test by searching with typos ("recat"), verify results appear in <500ms with yellow highlighting and relevance sorting
 
@@ -137,40 +137,40 @@
 
 ### UI Implementation for User Story 3
 
-- [ ] T051 [US3] Create export wizard container HTML structure in `chat-memo-pro/html/popup.html` with id="export-wizard"
-- [ ] T052 [US3] Create Step 1 UI in popup.html: Time Range selection with 6 preset buttons (All Time, Last Week, Last Month, Last 3 Months, Last Year, Custom Range) and custom datetime-local inputs
-- [ ] T053 [US3] Create Step 2 UI in popup.html: Export Mode selection with 2 buttons (Multiple Files ZIP, Single Document)
-- [ ] T054 [US3] Create Step 3 UI in popup.html: File Format selection with 3 buttons (Markdown, JSON, Plain Text)
-- [ ] T055 [US3] Create Export Preview Card in popup.html displaying: time range, mode, format, conversation count, output description, estimated file size
-- [ ] T056 [US3] Create "Start Export" button in popup.html with initial disabled state
+- [X] T051 [US3] Create export wizard container HTML structure in `chat-memo-pro/html/popup.html` with id="export-wizard"
+- [X] T052 [US3] Create Step 1 UI in popup.html: Time Range selection with 6 preset buttons (All Time, Last Week, Last Month, Last 3 Months, Last Year, Custom Range) and custom datetime-local inputs
+- [X] T053 [US3] Create Step 2 UI in popup.html: Export Mode selection with 2 buttons (Multiple Files ZIP, Single Document)
+- [X] T054 [US3] Create Step 3 UI in popup.html: File Format selection with 3 buttons (Markdown, JSON, Plain Text)
+- [X] T055 [US3] Create Export Preview Card in popup.html displaying: time range, mode, format, conversation count, output description, estimated file size
+- [X] T056 [US3] Create "Start Export" button in popup.html with initial disabled state
 
 ### Logic Implementation for User Story 3
 
-- [ ] T057 [US3] Create exportWizard object in `chat-memo-pro/js/popup.js` with properties: timeRange, customDateRange, mode, format
-- [ ] T058 [US3] Implement selectTimeRange() method in popup.js exportWizard to handle preset selection and show/hide custom date inputs
-- [ ] T059 [US3] Implement calculateDateRange() method in popup.js exportWizard to compute Unix timestamp ranges for presets (day = 24*60*60*1000)
-- [ ] T060 [US3] Implement selectMode() method in popup.js exportWizard to store selected export mode
-- [ ] T061 [US3] Implement selectFormat() method in popup.js exportWizard to store selected file format
-- [ ] T062 [US3] Implement validateForm() method in popup.js exportWizard with AND logic: check timeRange AND mode AND format are all set
-- [ ] T063 [US3] Implement custom date range validation in validateForm(): ensure startTime < endTime, enable/disable "Start Export" button
-- [ ] T064 [US3] Implement updatePreview() method in popup.js exportWizard to update Export Preview Card with current selections
-- [ ] T065 [US3] Implement estimateSize() function in popup.js to calculate approximate file size based on conversation content length
-- [ ] T066 [US3] Implement filterConversations() method in popup.js exportWizard to apply time range filter using Unix timestamps
+- [X] T057 [US3] Create exportWizard object in `chat-memo-pro/js/popup.js` with properties: timeRange, customDateRange, mode, format
+- [X] T058 [US3] Implement selectTimeRange() method in popup.js exportWizard to handle preset selection and show/hide custom date inputs
+- [X] T059 [US3] Implement calculateDateRange() method in popup.js exportWizard to compute Unix timestamp ranges for presets (day = 24*60*60*1000)
+- [X] T060 [US3] Implement selectMode() method in popup.js exportWizard to store selected export mode
+- [X] T061 [US3] Implement selectFormat() method in popup.js exportWizard to store selected file format
+- [X] T062 [US3] Implement validateForm() method in popup.js exportWizard with AND logic: check timeRange AND mode AND format are all set
+- [X] T063 [US3] Implement custom date range validation in validateForm(): ensure startTime < endTime, enable/disable "Start Export" button
+- [X] T064 [US3] Implement updatePreview() method in popup.js exportWizard to update Export Preview Card with current selections
+- [X] T065 [US3] Implement estimateSize() function in popup.js to calculate approximate file size based on conversation content length
+- [X] T066 [US3] Implement filterConversations() method in popup.js exportWizard to apply time range filter using Unix timestamps
 
 ### Export Format Implementation for User Story 3
 
-- [ ] T067 [US3] Implement exportAsMarkdown() method in popup.js with YAML frontmatter generation (fields: title, platform, created, updated, messages, url)
-- [ ] T068 [US3] Implement thinking blocks rendering in exportAsMarkdown() using `<details>` and `<summary>` HTML tags
-- [ ] T069 [US3] Implement exportAsJSON() method in popup.js to serialize filtered conversations to JSON format
-- [ ] T070 [US3] Implement exportAsPlainText() method in popup.js with format: `[User]:` and `[Assistant]:` prefixes, 50-character dividers (=====...)
-- [ ] T071 [US3] Implement file naming sanitization function in popup.js: remove `<>:"/\|?*` characters, replace with underscores, preserve non-ASCII (Chinese, emoji)
-- [ ] T072 [US3] Implement file naming convention in popup.js: `[platform]_[YYYYMMDDHHMMSS]_[sanitized-title].[ext]`
-- [ ] T073 [US3] Implement multiple files ZIP export using JSZip library in popup.js: create ZIP archive named `conversations_[timestamp].zip`
-- [ ] T074 [US3] Implement single document export with merged conversations, table of contents (for Markdown format), and horizontal dividers
-- [ ] T075 [US3] Implement downloadFile() helper function in popup.js using Blob and URL.createObjectURL() for file download
-- [ ] T076 [US3] Add JSZip integration for multiple files mode: create archive, add files, generate blob, trigger download
-- [ ] T077 [US3] Add loading indicator UI during export process (show spinner for >500ms operations)
-- [ ] T078 [US3] Add file size warning for exports >100MB before proceeding
+- [X] T067 [US3] Implement exportAsMarkdown() method in popup.js with YAML frontmatter generation (fields: title, platform, created, updated, messages, url)
+- [X] T068 [US3] Implement thinking blocks rendering in exportAsMarkdown() using `<details>` and `<summary>` HTML tags
+- [X] T069 [US3] Implement exportAsJSON() method in popup.js to serialize filtered conversations to JSON format
+- [X] T070 [US3] Implement exportAsPlainText() method in popup.js with format: `[User]:` and `[Assistant]:` prefixes, 50-character dividers (=====...)
+- [X] T071 [US3] Implement file naming sanitization function in popup.js: remove `<>:"/\|?*` characters, replace with underscores, preserve non-ASCII (Chinese, emoji)
+- [X] T072 [US3] Implement file naming convention in popup.js: `[platform]_[YYYYMMDDHHMMSS]_[sanitized-title].[ext]`
+- [X] T073 [US3] Implement multiple files ZIP export using JSZip library in popup.js: create ZIP archive named `conversations_[timestamp].zip`
+- [X] T074 [US3] Implement single document export with merged conversations, table of contents (for Markdown format), and horizontal dividers
+- [X] T075 [US3] Implement downloadFile() helper function in popup.js using Blob and URL.createObjectURL() for file download
+- [X] T076 [US3] Add JSZip integration for multiple files mode: create archive, add files, generate blob, trigger download
+- [X] T077 [US3] Add loading indicator UI during export process (show spinner for >500ms operations)
+- [X] T078 [US3] Add file size warning for exports >100MB before proceeding
 
 **Checkpoint**: User Story 3 complete - Test by exporting with different time ranges, modes, and formats, verify file naming and content structure
 
@@ -184,35 +184,35 @@
 
 ### Resize Handle Implementation for User Story 4
 
-- [ ] T079 [US4] Create ResizablePanel class in new file `chat-memo-pro/js/resizable-panel.js` with constructor accepting element and options (minWidth: 320, maxWidth: 800, defaultWidth: 400)
-- [ ] T080 [US4] Implement createResizeHandle() method in resizable-panel.js to create 5px-wide div with position absolute, right edge, col-resize cursor, transparent background
-- [ ] T081 [US4] Add hover effect to resize handle in resizable-panel.js: show blue overlay (rgba(59, 130, 246, 0.2)) on mouseenter, hide on mouseleave
-- [ ] T082 [US4] Implement startResize() method in resizable-panel.js to capture startX, startWidth, set document.body cursor and userSelect styles
-- [ ] T083 [US4] Implement resize() method in resizable-panel.js to calculate newWidth = startWidth + delta, enforce min/max constraints (320-800px)
-- [ ] T084 [US4] Implement stopResize() method in resizable-panel.js to clear cursor styles, save width to localStorage key 'sidebarWidth'
-- [ ] T085 [US4] Implement width tooltip display in resizable-panel.js: show centered overlay with current width in pixels during resize
-- [ ] T086 [US4] Add mousedown event listener to resize handle calling startResize()
-- [ ] T087 [US4] Add document-level mousemove event listener calling resize() when isResizing = true
-- [ ] T088 [US4] Add document-level mouseup event listener calling stopResize()
+- [X] T079 [US4] Create ResizablePanel class in new file `chat-memo-pro/js/resizable-panel.js` with constructor accepting element and options (minWidth: 320, maxWidth: 800, defaultWidth: 400)
+- [X] T080 [US4] Implement createResizeHandle() method in resizable-panel.js to create 5px-wide div with position absolute, right edge, col-resize cursor, transparent background
+- [X] T081 [US4] Add hover effect to resize handle in resizable-panel.js: show blue overlay (rgba(59, 130, 246, 0.2)) on mouseenter, hide on mouseleave
+- [X] T082 [US4] Implement startResize() method in resizable-panel.js to capture startX, startWidth, set document.body cursor and userSelect styles
+- [X] T083 [US4] Implement resize() method in resizable-panel.js to calculate newWidth = startWidth + delta, enforce min/max constraints (320-800px)
+- [X] T084 [US4] Implement stopResize() method in resizable-panel.js to clear cursor styles, save width to localStorage key 'sidebarWidth'
+- [X] T085 [US4] Implement width tooltip display in resizable-panel.js: show centered overlay with current width in pixels during resize
+- [X] T086 [US4] Add mousedown event listener to resize handle calling startResize()
+- [X] T087 [US4] Add document-level mousemove event listener calling resize() when isResizing = true
+- [X] T088 [US4] Add document-level mouseup event listener calling stopResize()
 
 ### Responsive Layout Implementation for User Story 4
 
-- [ ] T089 [US4] Implement updateResponsiveClasses() method in resizable-panel.js: add 'sidebar-narrow' class if width < 450px, add 'sidebar-wide' if width ≥ 450px
-- [ ] T090 [US4] Load saved width from localStorage on initialization in resizable-panel.js constructor, fallback to defaultWidth (400px)
-- [ ] T091 [US4] Call updateResponsiveClasses() during resize to apply classes dynamically
-- [ ] T092 [US4] Add CSS styles to popup.html for responsive breakpoints: `.sidebar-narrow .stats-container { grid-template-columns: 1fr; }` (vertical stacking)
-- [ ] T093 [US4] Add CSS styles to popup.html for wide sidebar: `.sidebar-wide .stats-container { grid-template-columns: 1fr 1fr; }` (horizontal layout)
-- [ ] T094 [US4] Add CSS styles to popup.html for preview text line clamp: `.sidebar-narrow .preview-text { -webkit-line-clamp: 1; }`
-- [ ] T095 [US4] Add CSS styles to popup.html for wide sidebar preview: `.sidebar-wide .preview-text { -webkit-line-clamp: 2; }`, very wide (>600px): 3 lines
-- [ ] T096 [US4] Add resize handle CSS styles to popup.html: position absolute, right 0, width 5px, height 100%, z-index 1000, transition for background color
+- [X] T089 [US4] Implement updateResponsiveClasses() method in resizable-panel.js: add 'sidebar-narrow' class if width < 450px, add 'sidebar-wide' if width ≥ 450px
+- [X] T090 [US4] Load saved width from localStorage on initialization in resizable-panel.js constructor, fallback to defaultWidth (400px)
+- [X] T091 [US4] Call updateResponsiveClasses() during resize to apply classes dynamically
+- [X] T092 [US4] Add CSS styles to popup.html for responsive breakpoints: `.sidebar-narrow .stats-container { grid-template-columns: 1fr; }` (vertical stacking)
+- [X] T093 [US4] Add CSS styles to popup.html for wide sidebar: `.sidebar-wide .stats-container { grid-template-columns: 1fr 1fr; }` (horizontal layout)
+- [X] T094 [US4] Add CSS styles to popup.html for preview text line clamp: `.sidebar-narrow .preview-text { -webkit-line-clamp: 1; }`
+- [X] T095 [US4] Add CSS styles to popup.html for wide sidebar preview: `.sidebar-wide .preview-text { -webkit-line-clamp: 2; }`, very wide (>600px): 3 lines
+- [X] T096 [US4] Add resize handle CSS styles to popup.html: position absolute, right 0, width 5px, height 100%, z-index 1000, transition for background color
 
 ### Integration for User Story 4
 
-- [ ] T097 [US4] Add `<script src="../js/resizable-panel.js"></script>` to popup.html before popup.js
-- [ ] T098 [US4] Initialize ResizablePanel in popup.js on DOMContentLoaded: `new ResizablePanel(document.querySelector('body'), { minWidth: 320, maxWidth: 800, defaultWidth: 400 })`
-- [ ] T099 [US4] Ensure sidebar element has position relative for absolute-positioned resize handle
-- [ ] T100 [US4] Add debouncing (300ms) to resize() method using requestAnimationFrame for smooth performance
-- [ ] T101 [US4] Test sidebar resize with rapid dragging to verify no visual glitches or excessive re-renders
+- [X] T097 [US4] Add `<script src="../js/resizable-panel.js"></script>` to popup.html before popup.js
+- [X] T098 [US4] Initialize ResizablePanel in popup.js on DOMContentLoaded: `new ResizablePanel(document.querySelector('body'), { minWidth: 320, maxWidth: 800, defaultWidth: 400 })`
+- [X] T099 [US4] Ensure sidebar element has position relative for absolute-positioned resize handle
+- [X] T100 [US4] Add debouncing (300ms) to resize() method using requestAnimationFrame for smooth performance
+- [X] T101 [US4] Test sidebar resize with rapid dragging to verify no visual glitches or excessive re-renders
 
 **Checkpoint**: User Story 4 complete - Test by dragging sidebar edge, verifying constraints (320-800px), persistence after restart, and responsive layout changes at 450px breakpoint
 
@@ -222,13 +222,13 @@
 
 **Purpose**: Final improvements and documentation that affect multiple user stories
 
-- [ ] T102 [P] Add JSDoc comments to all new adapter files (manus.js, genspark.js)
-- [ ] T103 [P] Add JSDoc comments to exportWizard object methods in popup.js
-- [ ] T104 [P] Add JSDoc comments to ResizablePanel class methods in resizable-panel.js
-- [ ] T105 [P] Update `README.md` (if exists) to document new supported platforms (Manus, Genspark)
-- [ ] T106 [P] Update `README.md` to document fuzzy search feature with typo tolerance
-- [ ] T107 [P] Update `README.md` to document export wizard with time filters
-- [ ] T108 [P] Update `README.md` to document resizable sidebar feature
+- [X] T102 [P] Add JSDoc comments to all new adapter files (manus.js, genspark.js)
+- [X] T103 [P] Add JSDoc comments to exportWizard object methods in popup.js
+- [X] T104 [P] Add JSDoc comments to ResizablePanel class methods in resizable-panel.js
+- [X] T105 [P] Update `README.md` (if exists) to document new supported platforms (Manus, Genspark)
+- [X] T106 [P] Update `README.md` to document fuzzy search feature with typo tolerance
+- [X] T107 [P] Update `README.md` to document export wizard with time filters
+- [X] T108 [P] Update `README.md` to document resizable sidebar feature
 - [ ] T109 Perform manual testing checklist: Test Manus adapter on 10+ conversations
 - [ ] T110 Perform manual testing checklist: Test Genspark adapter on 10+ conversations
 - [ ] T111 Perform manual testing checklist: Test fuzzy search with intentional typos (10+ searches)
