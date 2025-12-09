@@ -47,6 +47,7 @@ class GensparkAdapter extends BasePlatformAdapter {
 
   /**
    * 判断元素是否为消息元素
+   * 使用精准选择器识别用户消息和AI消息
    * @param {HTMLElement} element - 要检查的DOM元素
    * @returns {boolean} - 是否为消息元素
    */
@@ -55,84 +56,102 @@ class GensparkAdapter extends BasePlatformAdapter {
       return false;
     }
 
-    // Genspark 的消息元素是 div.bubble[message-content-id]
-    return element.matches('div.bubble[message-content-id]');
+    // 用户消息
+    if (element.matches('.conversation-statement.user')) {
+      return true;
+    }
+
+    // AI消息
+    if (element.matches('.conversation-statement.assistant')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
    * 提取页面上的所有消息
+   * 使用精准选择器区分用户和AI消息
    * @returns {Array} - 消息数组
    */
   extractMessages() {
     const messages = [];
+    const processedElements = new Set(); // 避免重复处理
 
-    // 查找所有消息气泡元素
-    const messageBubbles = document.querySelectorAll('div.bubble[message-content-id]');
+    // 精准选择器：用户消息
+    const userMessageElements = document.querySelectorAll('.conversation-statement.user');
 
-    if (messageBubbles.length === 0) {
-      console.log('Keep AI Memory (Genspark): 未找到任何消息气泡元素');
+    // 精准选择器：AI消息
+    const aiMessageElements = document.querySelectorAll('.conversation-statement.assistant');
+
+    // 创建所有元素的数组并按DOM顺序排序
+    const allElements = [];
+
+    userMessageElements.forEach(el => {
+      allElements.push({ element: el, role: 'user' });
+    });
+
+    aiMessageElements.forEach(el => {
+      allElements.push({ element: el, role: 'assistant' });
+    });
+
+    if (allElements.length === 0) {
+      console.log('Keep AI Memory (Genspark): 未找到任何消息元素');
       return messages;
     }
 
-    messageBubbles.forEach(bubble => {
-      let role = 'assistant';
+    // 按DOM中的位置排序（使用Node.compareDocumentPosition）
+    allElements.sort((a, b) => {
+      const position = a.element.compareDocumentPosition(b.element);
+      if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return -1; // a在b之前
+      } else if (position & Node.DOCUMENT_POSITION_PRECEDING) {
+        return 1; // a在b之后
+      }
+      return 0;
+    });
+
+    // 提取内容
+    allElements.forEach(({ element, role }) => {
+      if (processedElements.has(element)) {
+        return; // 跳过已处理的元素
+      }
+      processedElements.add(element);
+
       let content = '';
 
-      // Determine role:
-      // Priority 1: Check for the explicit 'conversation-item-desc user' ancestor
-      const userDescParent = bubble.closest('.conversation-item-desc.user');
-      
-      if (userDescParent) {
-        role = 'user';
-      } else {
-        // Fallback/Priority 2: Heuristic based on content structure
-        // User messages often contain 'pre code' directly, while AI messages often contain 'markdown-viewer'
-        const preCodeElement = bubble.querySelector('.content pre code');
-        const markdownViewerElement = bubble.querySelector('.content .markdown-viewer');
-
-        // If it has a <pre><code> block AND no markdown viewer, it's very likely a user message
-        // Also checking if the bubble itself has specific user-like classes if available (though Genspark seems to use parent wrapper)
-        if (preCodeElement && !markdownViewerElement) {
-          role = 'user';
-        } else {
-          // Default to assistant if no clear user indicator
-          role = 'assistant';
-        }
-      }
-
       if (role === 'user') {
-        // For user messages, try specific code block first, then fallback to generic content
-        const codeElement = bubble.querySelector('.content pre code');
+        // 用户消息：尝试多种选择器提取内容
+        const codeElement = element.querySelector('.content pre code');
         if (codeElement) {
           content = codeElement.innerText.trim();
         } else {
-          // Fallback: try getting text directly from content div if pre/code structure changes
-          const contentDiv = bubble.querySelector('.content');
-          if (contentDiv) {
-            content = contentDiv.innerText.trim();
-          }
+          const contentDiv = element.querySelector('.content') || element;
+          content = contentDiv.innerText.trim();
         }
-      } else { // role is assistant
-        // Priority 1: Markdown viewer content
-        const markdownViewer = bubble.querySelector('.content .markdown-viewer');
+      } else {
+        // AI消息：提取markdown内容
+        const markdownViewer = element.querySelector('.content .markdown-viewer');
         if (markdownViewer) {
           content = markdownViewer.innerText.trim();
         } else {
-          // Priority 2: Direct content text (fallback)
-          const contentDiv = bubble.querySelector('.content');
-          if (contentDiv) {
-            content = contentDiv.innerText.trim();
-          }
+          const contentDiv = element.querySelector('.content') || element;
+          content = contentDiv.innerText.trim();
         }
       }
 
       if (content && content.length > 0 && !this.isUIElement(content)) {
-        // Merge consecutive AI messages
-        if (role === 'assistant' && messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+        // 转换role到sender格式（统一使用sender字段）
+        const sender = role === 'user' ? 'user' : 'AI';
+
+        // 合并连续的同角色消息
+        if (messages.length > 0 && messages[messages.length - 1].sender === sender) {
+          // 如果上一条消息角色相同，则合并内容
           messages[messages.length - 1].content += '\n\n' + content;
         } else {
+          // 否则添加新消息
           messages.push({
-            role: role,
+            sender: sender,
             content: content,
             timestamp: Date.now()
           });
@@ -177,28 +196,66 @@ class GensparkAdapter extends BasePlatformAdapter {
 
   /**
    * 提取标题
+   * Genspark的对话标题存储在特定meta viewport标签之后紧挨着的<title>标签中
    * @returns {string} - 提取的标题
    */
   extractTitle() {
-    // 尝试从输入框提取 (agent name)
+    // 策略1: 从特定meta viewport标签之后的title标签提取（主要方法）
+    // 查找特定的meta viewport标签
+    const metaViewport = document.querySelector('meta[name="viewport"][content*="viewport-fit=cover"]');
+
+    if (metaViewport) {
+      // 查找紧挨着的下一个兄弟元素
+      let nextElement = metaViewport.nextElementSibling;
+
+      // 跳过可能的空白文本节点或注释，查找title标签
+      while (nextElement) {
+        if (nextElement.tagName === 'TITLE') {
+          const titleText = nextElement.textContent.trim();
+          if (titleText.length > 0) {
+            // 移除可能的网站后缀（如 " - Genspark"）
+            const cleanTitle = titleText.replace(/\s*[-–—|]\s*Genspark.*$/i, '').trim();
+            if (cleanTitle.length > 0) {
+              return cleanTitle;
+            }
+          }
+          break;
+        }
+        // 如果不是title标签，继续查找下一个兄弟元素
+        // 但只查找相邻的几个元素，避免走太远
+        if (nextElement.tagName !== 'META' && nextElement.tagName !== 'LINK') {
+          break;
+        }
+        nextElement = nextElement.nextElementSibling;
+      }
+    }
+
+    // 策略2: 从输入框提取 (agent name)
     const nameInput = document.querySelector('input.agent-name-input');
-    if (nameInput && nameInput.value) {
+    if (nameInput && nameInput.value && nameInput.value.trim().length > 0) {
       return nameInput.value.trim();
     }
 
-    // 尝试从页面中查找标题元素
+    // 策略3: 从页面中查找标题元素
     const titleElement = document.querySelector('h1') ||
                         document.querySelector('[class*="title"]');
-    if (titleElement) {
+    if (titleElement && titleElement.innerText.trim().length > 0) {
       return titleElement.innerText.trim();
     }
 
-    // 尝试从页面标题提取
-    const title = document.title;
-    if (title && !title.includes('Genspark')) {
-      return title;
+    // 策略4: 从第一条用户消息提取
+    const messages = this.extractMessages();
+    if (messages.length > 0) {
+      const firstUserMessage = messages.find(msg => msg.sender === 'user');
+      if (firstUserMessage && firstUserMessage.content) {
+        const content = firstUserMessage.content.trim();
+        const cleanContent = content.replace(/\s+/g, ' ').trim();
+        // 限制长度为60个字符
+        return cleanContent.substring(0, 60) + (cleanContent.length > 60 ? '...' : '');
+      }
     }
 
+    // 默认标题
     return 'Genspark Conversation';
   }
 }

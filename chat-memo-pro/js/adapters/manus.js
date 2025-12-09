@@ -189,99 +189,174 @@ class ManusAdapter extends BasePlatformAdapter {
 
   /**
    * 提取页面上的所有消息
+   * 使用精准选择器区分用户和AI消息
    * @returns {Array} - 消息数组
    */
   extractMessages() {
     const messages = [];
+    const processedElements = new Set(); // 避免重复处理
 
-    // 查找聊天主容器
-    // 基于提供的HTML片段，用户消息是 items-end，AI消息可能是 items-start
-    // 我们查找包含这些消息的共同父容器
-    
-    // 策略：查找所有可能的消息行
-    // 用户消息包含 items-end 和 justify-end
-    const userMessageRows = document.querySelectorAll('div[class*="items-end"][class*="justify-end"][data-event-id]');
-    
-    // AI消息通常在其后，或者是其他样式的行
-    // 我们可以尝试查找所有 data-event-id 的元素，然后根据内部特征区分
-    const allMessageRows = document.querySelectorAll('div[data-event-id]');
-    
-    if (allMessageRows.length === 0) {
-        // 如果找不到 data-event-id，尝试回退到旧的启发式方法
-        const userMessage = this.findUserMessage();
-        if (userMessage) {
-            messages.push({ role: 'user', content: userMessage, timestamp: Date.now() });
-        }
-        const aiResponse = this.extractAIResponse();
-        if (aiResponse) {
-            messages.push({ role: 'assistant', content: aiResponse, timestamp: Date.now() });
-        }
-        return messages;
-    }
-    
-    allMessageRows.forEach(row => {
-        let role = 'assistant';
-        let content = '';
-        
-        // 判定角色：精确检查类名
-        if (row.classList.contains('items-end') && row.classList.contains('justify-end')) {
-            role = 'user';
-        }
-        
-        // 提取内容
-        if (role === 'user') {
-            // 用户消息通常在 whitespace-pre-wrap 的 span 或 div 中
-            const contentEl = row.querySelector('.whitespace-pre-wrap');
-            if (contentEl) {
-                content = contentEl.innerText.trim();
-            }
-        } else {
-            // AI消息
-            // 尝试查找 markdown 渲染区域或普通文本
-            // Manus 的 AI 消息可能包含多个步骤（steps）和最终回答
-            // 我们提取整个文本内容，或者寻找特定的 markdown 容器
-            const contentEl = row.querySelector('.markdown-body') || row;
-            content = contentEl.innerText.trim();
-        }
+    // 精准选择器：用户消息
+    const userMessageElements = document.querySelectorAll('.transition-all.duration-300');
 
-        // 清理消息内容（移除时间戳等）
-        content = this.cleanMessageContent(content);
+    // 精准选择器：AI消息
+    const aiMessageElements = document.querySelectorAll('.manus-markdown.group');
 
-        if (content && content.length > 0 && !this.isUIElement(content)) {
-            // 合并连续的AI消息
-            if (role === 'assistant' && messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
-                // 如果上一条也是AI消息，则合并内容
-                messages[messages.length - 1].content += '\n\n' + content;
-            } else {
-                // 否则添加新消息
-                messages.push({
-                    role: role,
-                    content: content,
-                    timestamp: Date.now() // 注意：这里最好能提取实际时间，但目前片段里只有 hover 可见的时间
-                });
-            }
-        }
+    // 用户附件（特殊Tailwind group/attach语法）
+    const userAttachments = document.querySelectorAll('[class*="group/attach"]');
+
+    // 创建所有元素的数组并按DOM顺序排序
+    const allElements = [];
+
+    userMessageElements.forEach(el => {
+      allElements.push({ element: el, role: 'user', type: 'message' });
     });
+
+    aiMessageElements.forEach(el => {
+      allElements.push({ element: el, role: 'assistant', type: 'message' });
+    });
+
+    userAttachments.forEach(el => {
+      allElements.push({ element: el, role: 'user', type: 'attachment' });
+    });
+
+    // 按DOM中的位置排序（使用Node.compareDocumentPosition）
+    allElements.sort((a, b) => {
+      const position = a.element.compareDocumentPosition(b.element);
+      if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+        return -1; // a在b之前
+      } else if (position & Node.DOCUMENT_POSITION_PRECEDING) {
+        return 1; // a在b之后
+      }
+      return 0;
+    });
+
+    // 提取内容
+    allElements.forEach(({ element, role, type }) => {
+      if (processedElements.has(element)) {
+        return; // 跳过已处理的元素
+      }
+      processedElements.add(element);
+
+      let content = '';
+
+      if (type === 'attachment') {
+        // 处理用户附件
+        // 提取文件名或附件描述
+        const fileName = element.querySelector('.text-sm') || element;
+        content = `[附件] ${fileName.innerText.trim()}`;
+      } else if (role === 'user') {
+        // 用户消息：提取文本内容
+        const contentEl = element.querySelector('.whitespace-pre-wrap') || element;
+        content = contentEl.innerText.trim();
+      } else if (role === 'assistant') {
+        // AI消息：提取markdown内容
+        content = element.innerText.trim();
+      }
+
+      // 清理消息内容（移除时间戳等）
+      content = this.cleanMessageContent(content);
+
+      if (content && content.length > 0 && !this.isUIElement(content)) {
+        // 转换role到sender格式（统一使用sender字段）
+        const sender = role === 'user' ? 'user' : 'AI';
+
+        // 合并连续的同角色消息
+        if (messages.length > 0 && messages[messages.length - 1].sender === sender) {
+          // 如果上一条消息角色相同，则合并内容
+          messages[messages.length - 1].content += '\n\n' + content;
+        } else {
+          // 否则添加新消息
+          messages.push({
+            sender: sender,
+            content: content,
+            timestamp: Date.now()
+          });
+        }
+      }
+    });
+
+    // 如果没有找到任何消息，回退到启发式方法
+    if (messages.length === 0) {
+      const userMessage = this.findUserMessage();
+      if (userMessage) {
+        messages.push({ sender: 'user', content: userMessage, timestamp: Date.now() });
+      }
+      const aiResponse = this.extractAIResponse();
+      if (aiResponse) {
+        messages.push({ sender: 'AI', content: aiResponse, timestamp: Date.now() });
+      }
+    }
 
     return messages;
   }
 
   /**
    * 检查元素是否为消息元素
-   * Manus没有明确的消息元素标记，依赖MutationObserver触发后的完整提取
+   * 使用精准选择器识别用户消息、AI消息和附件
    * @param {Node} node - 要检查的DOM节点
    * @returns {boolean} - 是否为消息元素
    */
   isMessageElement(node) {
+    if (!node || !node.matches) {
+      return false;
+    }
+
+    // 用户消息
+    if (node.matches('.transition-all.duration-300')) {
+      return true;
+    }
+
+    // AI消息
+    if (node.matches('.manus-markdown.group')) {
+      return true;
+    }
+
+    // 用户附件（group/attach是Tailwind的group modifier语法）
+    if (node.classList && Array.from(node.classList).some(cls => cls.includes('group/attach'))) {
+      return true;
+    }
+
     return false;
   }
 
   /**
    * 提取标题
+   * Manus的对话标题存储在canonical link标签之后紧挨着的<title>标签中
    * @returns {string} - 提取的标题
    */
   extractTitle() {
-    // 策略1: 尝试从页面UI提取对话标题
+    // 策略1: 从canonical link标签之后的title标签提取（主要方法）
+    // 查找特定的canonical link标签（href以https://manus.im/app开头）
+    const canonicalLink = document.querySelector('link[rel="canonical"][href^="https://manus.im/app"]');
+
+    if (canonicalLink) {
+      // 查找紧挨着的下一个兄弟元素
+      let nextElement = canonicalLink.nextElementSibling;
+
+      // 跳过可能的空白文本节点或其他meta/link标签，查找title标签
+      while (nextElement) {
+        if (nextElement.tagName === 'TITLE') {
+          const titleText = nextElement.textContent.trim();
+          if (titleText.length > 0) {
+            // 移除可能的网站后缀（如 " - Manus"）
+            const cleanTitle = titleText.replace(/\s*[-–—|]\s*Manus.*$/i, '').trim();
+            if (cleanTitle.length > 0 && cleanTitle !== 'Manus Task') {
+              return cleanTitle;
+            }
+          }
+          break;
+        }
+        // 如果不是title标签，继续查找下一个兄弟元素
+        // 但只查找相邻的几个元素，避免走太远
+        if (nextElement.tagName !== 'META' && nextElement.tagName !== 'LINK') {
+          break;
+        }
+        nextElement = nextElement.nextElementSibling;
+      }
+    }
+
+    // 策略2: 尝试从页面UI提取对话标题
     const titleElement = document.querySelector('.text-base.font-medium.truncate');
     if (titleElement && titleElement.innerText.trim()) {
       const title = titleElement.innerText.trim();
@@ -290,11 +365,11 @@ class ManusAdapter extends BasePlatformAdapter {
       }
     }
 
-    // 策略2: 从提取的消息中获取第一条用户消息作为标题
+    // 策略3: 从提取的消息中获取第一条用户消息作为标题
     const messages = this.extractMessages();
     if (messages.length > 0) {
       // 查找第一条用户消息
-      const firstUserMessage = messages.find(msg => msg.role === 'user');
+      const firstUserMessage = messages.find(msg => msg.sender === 'user');
       if (firstUserMessage && firstUserMessage.content) {
         const content = firstUserMessage.content.trim();
         // 清理内容：移除多余的空白和换行
@@ -310,12 +385,6 @@ class ManusAdapter extends BasePlatformAdapter {
         const cleanContent = content.replace(/\s+/g, ' ').trim();
         return cleanContent.substring(0, 60) + (cleanContent.length > 60 ? '...' : '');
       }
-    }
-
-    // 策略3: 尝试从页面标题提取
-    const pageTitle = document.title;
-    if (pageTitle && !pageTitle.includes('Manus') && pageTitle !== 'Manus Task') {
-      return pageTitle;
     }
 
     // 策略4: 使用启发式方法查找用户消息

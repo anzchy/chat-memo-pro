@@ -1,0 +1,10 @@
+1. Genspark User message:
+`.conversation-statement.user`
+
+2. Genspark Assisstant:
+`.conversation-statement.assistant`
+
+
+3.conversation Title 提取：
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Flask 后端性能重构：TypeScript 重构方案</title>
