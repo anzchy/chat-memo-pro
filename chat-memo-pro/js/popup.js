@@ -193,6 +193,26 @@ function registerEventListeners() {
   elements.tabSettings.addEventListener('click', () => switchTab('settings'));
 
   
+  // 关闭侧边栏按钮
+  const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener('click', () => {
+      // 通知 background.js 更新侧边栏状态
+      chrome.runtime.sendMessage({ type: 'closeSidePanel' }, () => {
+        // 关闭侧边栏窗口
+        window.close();
+      });
+    });
+  }
+
+  // 监听来自 background.js 的关闭请求
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'closeSidePanel') {
+      window.close();
+      sendResponse({ success: true });
+    }
+  });
+
   // 联系我们按钮
   const contactUsBtn = document.getElementById('contact-us');
   if (contactUsBtn) {

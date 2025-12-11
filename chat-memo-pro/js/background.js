@@ -31,35 +31,53 @@ const PLATFORM_NAMES = {
   'genspark': 'Genspark'
 };
 
+// 配置侧边栏行为：禁用默认点击打开，使用自定义切换逻辑
+async function configureActionBehavior() {
+  try {
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+    console.log('Chat-Memo: 侧边栏行为配置完成');
+  } catch (error) {
+    // 静默失败
+  }
+}
+
 // 扩展安装或更新时
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
+  // 配置侧边栏行为
+  await configureActionBehavior();
+
   if (details.reason === 'install') {
     // 首次安装时初始化设置
     chrome.storage.sync.set({ settings: defaultSettings }, () => {
       console.log('Chat-Memo: ' + (chrome.i18n.getMessage('initSettingsComplete') || '初始化设置完成'));
     });
-    
+
     // 首次安装时打开欢迎页面
     chrome.tabs.create({
-      url: 'https://chatmemo.ai/welcome'
+      url: 'https://github.com/anzchy/chat-memo-pro'
     });
   } else if (details.reason === 'update') {
     const currentVersion = chrome.runtime.getManifest().version;
     const previousVersion = details.previousVersion;
-    
+
     console.log(`Chat-Memo: 插件已从版本 ${previousVersion} 更新到版本 ${currentVersion}`);
-    
+
     // 检查是否为主要版本或次要版本更新
-    if (isMajorVersionUpdate(previousVersion, currentVersion) || 
+    if (isMajorVersionUpdate(previousVersion, currentVersion) ||
         isMinorVersionUpdate(previousVersion, currentVersion)) {
       chrome.tabs.create({
-        url: 'https://chatmemo.ai/updates'
+        url: 'https://github.com/anzchy/chat-memo-pro'
       });
       console.log('Chat-Memo: 已打开更新提示页面');
     } else {
       console.log('Chat-Memo: 当前版本无需显示更新提示');
     }
   }
+});
+
+// 启动时配置侧边栏行为
+chrome.runtime.onStartup.addListener(async () => {
+  await configureActionBehavior();
 });
 
 /**
@@ -255,45 +273,87 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ error: chrome.i18n.getMessage('cannotGetCurrentTabInfo') || '无法获取当前标签页信息' });
       }
       return true;
+
+    case 'closeSidePanel':
+      // 处理来自 popup.js 的侧边栏关闭通知
+      // 获取当前活动窗口的ID并更新状态
+      chrome.windows.getCurrent((window) => {
+        if (window && window.id) {
+          handleSidePanelClosed(window.id);
+        }
+        sendResponse({ status: 'ok' });
+      });
+      return true;
   }
-  
+
   return false;
 });
 
 /**
- * 带重试的发送侧边栏切换消息
- * @param {number} tabId - 标签页ID
- * @param {number} retries - 剩余重试次数
+ * 跟踪每个窗口的侧边栏状态
+ * windowId -> boolean (true = open, false = closed)
  */
-async function sendToggleSidebarWithRetry(tabId, retries = 3) {
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: 'toggleSidebar' });
-    console.log('Chat-Memo: 侧边栏切换消息发送成功');
-  } catch (error) {
-    if (retries > 0) {
-      console.log(`Chat-Memo: 消息发送失败，${200}ms 后重试 (剩余 ${retries} 次)...`);
-      await new Promise(resolve => setTimeout(resolve, 200));
-      return sendToggleSidebarWithRetry(tabId, retries - 1);
-    } else {
-      console.error('Chat-Memo: 发送打开侧边栏消息失败:', error.message);
-      console.log('Chat-Memo: content script 可能未加载，请刷新页面后重试');
+const sidePanelState = new Map();
+
+/**
+ * 切换侧边栏的打开/关闭状态
+ * @param {number} windowId - 窗口ID
+ */
+async function toggleSidePanel(windowId) {
+  if (!windowId) {
+    return;
+  }
+
+  const isOpen = sidePanelState.get(windowId) || false;
+
+  if (!isOpen) {
+    // 打开侧边栏
+    try {
+      await chrome.sidePanel.open({ windowId });
+      sidePanelState.set(windowId, true);
+      console.log('Chat-Memo: 侧边栏已打开');
+    } catch (error) {
+      console.error('Chat-Memo: 打开侧边栏失败:', error);
+    }
+  } else {
+    // 关闭侧边栏（通过发送关闭消息给 popup.js）
+    try {
+      // 向侧边栏发送关闭消息
+      await chrome.runtime.sendMessage({ type: 'closeSidePanel' });
+      sidePanelState.set(windowId, false);
+      console.log('Chat-Memo: 侧边栏关闭请求已发送');
+    } catch (error) {
+      // 如果发送消息失败（可能侧边栏已经关闭），重置状态
+      console.log('Chat-Memo: 侧边栏可能已关闭，重置状态');
+      sidePanelState.set(windowId, false);
     }
   }
 }
 
-// 监听扩展图标点击事件，发送消息给 content script 打开注入式侧边栏
-chrome.action.onClicked.addListener((tab) => {
-  // 检查是否在支持的页面（有 content script 的页面）
-  const url = tab.url || '';
+/**
+ * 处理来自 popup.js 的关闭侧边栏请求
+ * @param {number} windowId - 窗口ID
+ */
+function handleSidePanelClosed(windowId) {
+  if (windowId) {
+    sidePanelState.set(windowId, false);
+    console.log('Chat-Memo: 侧边栏已关闭（由用户操作）');
+  }
+}
 
-  // 如果是特殊页面（chrome://, edge:// 等），不支持 content script
-  if (url.startsWith('chrome://') || url.startsWith('edge://') || url.startsWith('about:') || url.startsWith('file://')) {
-    console.log('Chat-Memo: 当前页面不支持使用侧边栏，请在支持的 AI 聊天平台页面使用');
+// 监听扩展图标点击事件，使用 Side Panel API 打开侧边栏
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab || !tab.windowId) {
     return;
   }
 
-  // 使用带重试的发送函数
-  sendToggleSidebarWithRetry(tab.id);
+  await toggleSidePanel(tab.windowId);
+});
+
+// 清理窗口关闭时的状态
+chrome.windows.onRemoved.addListener((windowId) => {
+  sidePanelState.delete(windowId);
+  console.log(`Chat-Memo: 窗口 ${windowId} 状态已清理`);
 });
 
 // 数据库对象和相关函数
