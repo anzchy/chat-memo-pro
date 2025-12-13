@@ -262,5 +262,98 @@
    },
    "visitSupportedPages": {
       "message": "访问支持的 AI 聊天页面开始记录对话"
+   },
+   "cloudSyncSettings": {
+      "message": "云同步设置"
+   },
+   "setupInstructions": {
+      "message": "设置说明"
+   },
+   "setupStep1": {
+      "message": "在 supabase.com 创建免费账户"
+   },
+   "setupStep2": {
+      "message": "复制 SQL 架构并在 Supabase SQL 编辑器中运行"
+   },
+   "setupStep3": {
+      "message": "在下方输入您的项目 URL 和 API 密钥"
+   },
+   "setupStep4": {
+      "message": "使用 Supabase Auth 凭据登录"
+   },
+   "copySql": {
+      "message": "复制 SQL 架构"
+   },
+   "projectUrl": {
+      "message": "项目 URL"
+   },
+   "anonKey": {
+      "message": "匿名/公开 API 密钥"
+   },
+   "saveConfiguration": {
+      "message": "保存配置"
+   },
+   "signIn": {
+      "message": "登录"
+   },
+   "signOut": {
+      "message": "登出"
+   },
+   "email": {
+      "message": "邮箱"
+   },
+   "password": {
+      "message": "密码"
+   },
+   "testConnection": {
+      "message": "测试连接"
+   },
+   "syncActions": {
+      "message": "同步操作"
+   },
+   "syncNow": {
+      "message": "立即同步"
+   },
+   "downloadFromCloud": {
+      "message": "从云端下载"
+   },
+   "replaceLocal": {
+      "message": "用云端替换本地"
+   },
+   "resetSync": {
+      "message": "重置同步状态"
+   },
+   "forceResync": {
+      "message": "强制完全重新同步"
+   },
+   "retryFailed": {
+      "message": "重试失败项"
+   },
+   "restoreDeleted": {
+      "message": "恢复已删除（云端）"
+   },
+   "autoSync": {
+      "message": "自动同步"
+   },
+   "enableAutoSync": {
+      "message": "启用自动同步"
+   },
+   "syncInterval": {
+      "message": "同步间隔"
+   },
+   "syncStatus": {
+      "message": "同步状态"
+   },
+   "syncHistory": {
+      "message": "同步历史"
+   },
+   "advanced": {
+      "message": "高级"
+   },
+   "verboseLogging": {
+      "message": "详细日志"
+   },
+   "syncSettings": {
+      "message": "同步设置"
    }
 }

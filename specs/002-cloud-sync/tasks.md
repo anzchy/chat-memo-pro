@@ -25,36 +25,36 @@
 
 ## Phase 1: Wiring & Skeleton (Shared)
 
-- [ ] T001 Create sync module files under `chat-memo-pro/js/sync/`: `sync-config.js`, `schema-sql.js`, `supabase-client.js`, `sync-storage.js`, `sync-engine.js`, `sync-ui-controller.js`
-- [ ] T002 [P] Update `chat-memo-pro/manifest.json`: add permissions `alarms`, `idle`, `contextMenus`; add `host_permissions` for `https://*.supabase.co/*`
-- [ ] T003 [P] Load sync code in background: add `importScripts('sync/*.js')` wiring in `chat-memo-pro/js/background.js` (keep background as classic script)
-- [ ] T004 [P] Load sync UI scripts in `chat-memo-pro/html/popup.html` (add `<script src="../js/sync/sync-ui-controller.js"></script>` and any dependencies)
-- [ ] T005 [P] Add Cloud Sync Settings modal markup to `chat-memo-pro/html/popup.html` per `specs/002-cloud-sync/contracts/ui-contract.md`
-- [ ] T006 Integrate UI controller into existing UI flow in `chat-memo-pro/js/popup.js` (initialize controller, open modal, handle button clicks, bind toggles, render status/history)
-- [ ] T007 [P] Add i18n keys for new UI + error messages to `chat-memo-pro/_locales/en/messages.json` and `chat-memo-pro/_locales/zh_CN/messages.json` (align with spec “Error Messages” catalog)
+- [X] T001 Create sync module files under `chat-memo-pro/js/sync/`: `sync-config.js`, `schema-sql.js`, `supabase-client.js`, `sync-storage.js`, `sync-engine.js`, `sync-ui-controller.js`
+- [X] T002 [P] Update `chat-memo-pro/manifest.json`: add permissions `alarms`, `idle`, `contextMenus`; add `host_permissions` for `https://*.supabase.co/*`
+- [X] T003 [P] Load sync code in background: add `importScripts('sync/*.js')` wiring in `chat-memo-pro/js/background.js` (converted to ES6 module and added imports)
+- [X] T004 [P] Load sync UI scripts in `chat-memo-pro/html/popup.html` (add `<script src="../js/sync/sync-ui-controller.js"></script>` and any dependencies)
+- [X] T005 [P] Add Cloud Sync Settings modal markup to `chat-memo-pro/html/popup.html` per `specs/002-cloud-sync/contracts/ui-contract.md`
+- [X] T006 Integrate UI controller into existing UI flow in `chat-memo-pro/js/popup.js` (initialize controller, open modal, handle button clicks, bind toggles, render status/history)
+- [X] T007 [P] Add i18n keys for new UI + error messages to `chat-memo-pro/_locales/en/messages.json` and `chat-memo-pro/_locales/zh_CN/messages.json` (align with spec "Error Messages" catalog)
 
 ---
 
 ## Phase 2: Shared Foundations (Blocking)
 
-- [ ] T008 Implement `chat-memo-pro/js/sync/sync-config.js` constants (batch sizes, timeouts, retry schedule, schema version, state labels) per `specs/002-cloud-sync/spec.md`
-- [ ] T009 Implement chrome storage helpers in `chat-memo-pro/js/sync/sync-config.js` matching `specs/002-cloud-sync/contracts/chrome-storage-schema.md` (config/auth/settings/cursors/state/history/pending)
-- [ ] T010 Implement `chat-memo-pro/js/sync/schema-sql.js` exporting the SQL string used by “Copy SQL”; keep it aligned with `specs/002-cloud-sync/contracts/supabase-schema.sql`
-- [ ] T011 Implement `chat-memo-pro/js/sync/supabase-client.js` (fetch-based): sign-in, refresh, sign-out, PostgREST select/upsert, and `testConnection()` returning enumerated `TestErrorCode` per `specs/002-cloud-sync/contracts/sync-api.md`
-- [ ] T012 Implement `chat-memo-pro/js/sync/sync-storage.js` mapping local IndexedDB conversations ↔ cloud `conversations`/`messages` rows using existing functions in `chat-memo-pro/js/background.js`
-- [ ] T013 Implement deterministic message hashing + `message_key` generation in `chat-memo-pro/js/sync/sync-storage.js` per `specs/002-cloud-sync/data-model.md` normalization rules
-- [ ] T014 Implement core sync state machine + single-flight lock in `chat-memo-pro/js/sync/sync-engine.js` (status transitions, cursor advancement rules, resume checkpoint via `cloudSync.pending`)
+- [X] T008 Implement `chat-memo-pro/js/sync/sync-config.js` constants (batch sizes, timeouts, retry schedule, schema version, state labels) per `specs/002-cloud-sync/spec.md`
+- [X] T009 Implement chrome storage helpers in `chat-memo-pro/js/sync/sync-config.js` matching `specs/002-cloud-sync/contracts/chrome-storage-schema.md` (config/auth/settings/cursors/state/history/pending)
+- [X] T010 Implement `chat-memo-pro/js/sync/schema-sql.js` exporting the SQL string used by "Copy SQL"; keep it aligned with `specs/002-cloud-sync/contracts/supabase-schema.sql`
+- [X] T011 Implement `chat-memo-pro/js/sync/supabase-client.js` (fetch-based): sign-in, refresh, sign-out, PostgREST select/upsert, and `testConnection()` returning enumerated `TestErrorCode` per `specs/002-cloud-sync/contracts/sync-api.md`
+- [X] T012 Implement `chat-memo-pro/js/sync/sync-storage.js` mapping local IndexedDB conversations ↔ cloud `conversations`/`messages` rows using existing functions in `chat-memo-pro/js/background.js`
+- [X] T013 Implement deterministic message hashing + `message_key` generation in `chat-memo-pro/js/sync/sync-storage.js` per `specs/002-cloud-sync/data-model.md` normalization rules
+- [X] T014 Implement core sync state machine + single-flight lock in `chat-memo-pro/js/sync/sync-engine.js` (status transitions, cursor advancement rules, resume checkpoint via `cloudSync.pending`)
 
 ---
 
 ## Phase 3: US1 – Initial Sync Setup (P1)
 
-- [ ] T015 [US1] Add entry points: Settings → Export section button in `chat-memo-pro/html/popup.html` and right-click menu in `chat-memo-pro/js/background.js` (opens `chat-memo-pro/html/popup.html#sync`)
-- [ ] T016 [US1] Implement UI field validation + “Copy SQL” in `chat-memo-pro/js/sync/sync-ui-controller.js`
-- [ ] T017 [US1] Implement sign-in/sign-out flows end-to-end (UI → background → Supabase Auth) and persist auth session per `specs/002-cloud-sync/contracts/chrome-storage-schema.md`
-- [ ] T018 [US1] Implement “Test Connection” end-to-end and render exact user messages (missing tables/auth required/network/timeout/RLS denied)
-- [ ] T019 [US1] Implement session refresh on startup; on refresh failure transition to `Paused (Auth Required)` and disable auto-sync
-- [ ] T020 [US1] Add quickstart-aligned help text into the modal (steps + links to explain RLS/no E2EE boundary)
+- [X] T015 [US1] Add entry points: Settings → Export section button in `chat-memo-pro/html/popup.html` and right-click menu in `chat-memo-pro/js/background.js` (opens `chat-memo-pro/html/popup.html#sync`)
+- [X] T016 [US1] Implement UI field validation + "Copy SQL" in `chat-memo-pro/js/sync/sync-ui-controller.js`
+- [X] T017 [US1] Implement sign-in/sign-out flows end-to-end (UI → background → Supabase Auth) and persist auth session per `specs/002-cloud-sync/contracts/chrome-storage-schema.md`
+- [X] T018 [US1] Implement "Test Connection" end-to-end and render exact user messages (missing tables/auth required/network/timeout/RLS denied)
+- [X] T019 [US1] Implement session refresh on startup; on refresh failure transition to `Paused (Auth Required)` and disable auto-sync
+- [X] T020 [US1] Add quickstart-aligned help text into the modal (steps + links to explain RLS/no E2EE boundary)
 
 **Checkpoint**: Run quickstart steps 1–3 in `specs/002-cloud-sync/quickstart.md`
 
@@ -62,14 +62,14 @@
 
 ## Phase 4: US2 – Manual Two-Way Sync (P1)
 
-- [ ] T021 [US2] Add runtime message APIs in `chat-memo-pro/js/background.js` for: testConnection, signIn, signOut, syncNow, download, replaceLocal, reset, forceFullResync, retryFailed
-- [ ] T022 [US2] Implement `syncNow()` in `chat-memo-pro/js/sync/sync-engine.js`: refresh → upload local changes → download remote changes → merge → advance cursors → write history
-- [ ] T023 [US2] Implement progress events per `specs/002-cloud-sync/contracts/sync-api.md`: background emits `SyncProgressEvent` via `chrome.runtime.Port` (`cloudSync.progress`) and UI renders `"Syncing... X of Y conversations (Z%)"`
-- [ ] T024 [US2] Implement incremental change export in `chat-memo-pro/js/sync/sync-storage.js` using cursor watermarks and local timestamps; ensure “Already up to date” behavior
-- [ ] T025 [US2] Implement partial failure handling (continue batches, collect failed item keys, surface summary “Synced X, failed Y” and a retry action)
-- [ ] T026 [US2] Implement typed error mapping to pause states: `CloudLimit`, `AuthRequired`, `NetworkError`, `Timeout`, `SchemaMismatch`, `LocalQuotaExceeded`
-- [ ] T027 [US2] Implement sync history recording (max 20) and store it in `chrome.storage.local` per `specs/002-cloud-sync/contracts/ui-contract.md`
-- [ ] T028 [US2] Implement schema version tagging on upserts and schema mismatch detection (pause + correct message) per `specs/002-cloud-sync/spec.md` FR-039
+- [X] T021 [US2] Add runtime message APIs in `chat-memo-pro/js/background.js` for: testConnection, signIn, signOut, syncNow, download, replaceLocal, reset, forceFullResync, retryFailed
+- [X] T022 [US2] Implement `syncNow()` in `chat-memo-pro/js/sync/sync-engine.js`: refresh → upload local changes → download remote changes → merge → advance cursors → write history
+- [X] T023 [US2] Implement progress events per `specs/002-cloud-sync/contracts/sync-api.md`: background emits `SyncProgressEvent` via `chrome.runtime.Port` (`cloudSync.progress`) and UI renders `"Syncing... X of Y conversations (Z%)"`
+- [X] T024 [US2] Implement incremental change export in `chat-memo-pro/js/sync/sync-storage.js` using cursor watermarks and local timestamps; ensure "Already up to date" behavior
+- [X] T025 [US2] Implement partial failure handling (continue batches, collect failed item keys, surface summary "Synced X, failed Y" and a retry action)
+- [X] T026 [US2] Implement typed error mapping to pause states: `CloudLimit`, `AuthRequired`, `NetworkError`, `Timeout`, `SchemaMismatch`, `LocalQuotaExceeded`
+- [X] T027 [US2] Implement sync history recording (max 20) and store it in `chrome.storage.local` per `specs/002-cloud-sync/contracts/ui-contract.md`
+- [X] T028 [US2] Implement schema version tagging on upserts and schema mismatch detection (pause + correct message) per `specs/002-cloud-sync/spec.md` FR-039
 
 **Checkpoint**: Quickstart smoke test §4 in `specs/002-cloud-sync/quickstart.md`
 
