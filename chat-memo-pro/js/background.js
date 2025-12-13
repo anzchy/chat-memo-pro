@@ -12,6 +12,7 @@ import {
   getSettings as getSyncSettings,
   setSettings as setSyncSettings,
   getState as getSyncState,
+  getAuth as getSyncAuth,
   getPending as getSyncPending,
   setPending as setSyncPending,
 } from './sync/sync-config.js';
@@ -51,6 +52,7 @@ globalThis.cloudSyncDebug = {
   dump: async () => ({
     settings: await getSyncSettings(),
     state: await getSyncState(),
+    auth: await getSyncAuth(),
     pending: await getSyncPending(),
     alarms: await chrome.alarms.getAll(),
   }),
@@ -374,7 +376,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'signOut':
       SupabaseClient.signOut()
-        .then(() => {
+        .then(async () => {
+          try {
+            const settings = await getSyncSettings();
+            if (settings.autoSyncEnabled) {
+              settings.autoSyncEnabled = false;
+              await setSyncSettings(settings);
+            }
+            await clearAutoSync();
+          } catch {
+            // Best-effort only
+          }
           sendResponse({ ok: true });
         })
         .catch(error => {
@@ -1303,19 +1315,26 @@ function notifySidebarRefresh() {
 
 const SYNC_ALARM_NAME = 'cloudSync.autoSync';
 
+function isSignedInForCloudSync(state, auth) {
+  if (!auth || !auth.accessToken || !auth.refreshToken) return false;
+  if (state && String(state.status).startsWith('Paused (Auth Required)')) return false;
+  return true;
+}
+
 /**
  * Initialize auto-sync on extension startup
  */
 async function initializeAutoSync() {
   try {
-    const settings = await getSyncSettings();
-    const state = await getSyncState();
+    const [settings, state, auth] = await Promise.all([getSyncSettings(), getSyncState(), getSyncAuth()]);
 
     console.log('Cloud Sync: initializeAutoSync', { autoSyncEnabled: settings.autoSyncEnabled, status: state.status });
 
     // Only schedule if auto-sync is enabled and user is signed in
-    if (settings.autoSyncEnabled && state.status !== 'Not Configured') {
+    if (settings.autoSyncEnabled && isSignedInForCloudSync(state, auth)) {
       await scheduleAutoSync(settings.syncIntervalMinutes);
+    } else {
+      await clearAutoSync();
     }
 
     // Try to refresh session on startup
@@ -1375,8 +1394,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         return;
       }
 
-      const state = await getSyncState();
-      if (!state || state.status === 'Not Configured') {
+      const [state, auth] = await Promise.all([getSyncState(), getSyncAuth()]);
+      if (!isSignedInForCloudSync(state, auth)) {
         return;
       }
 
@@ -1419,11 +1438,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  * @param {boolean} enabled
  */
 async function handleUpdateAutoSync(enabled) {
-  const settings = await getSyncSettings();
-  const state = await getSyncState();
+  const [settings, state, auth] = await Promise.all([getSyncSettings(), getSyncState(), getSyncAuth()]);
 
   if (enabled) {
-    if (!state || state.status === 'Not Configured') {
+    if (!isSignedInForCloudSync(state, auth)) {
       console.log('Cloud Sync: auto-sync enable ignored (not signed in)');
       return;
     }

@@ -103,13 +103,17 @@ export async function syncNow(options = {}) {
     // Step 2: Upload local changes
     const uploadResult = await uploadToCloud({ onProgress });
     if (!uploadResult.ok) {
-      throw new Error(`Upload failed: ${uploadResult.errorCode}`);
+      const error = new Error(uploadResult.message || `Upload failed: ${uploadResult.errorCode}`);
+      error.code = uploadResult.errorCode || SYNC_ERROR_CODE.UNKNOWN;
+      throw error;
     }
 
     // Step 3: Download remote changes
     const downloadResult = await downloadFromCloud({ onProgress });
     if (!downloadResult.ok) {
-      throw new Error(`Download failed: ${downloadResult.errorCode}`);
+      const error = new Error(downloadResult.message || `Download failed: ${downloadResult.errorCode}`);
+      error.code = downloadResult.errorCode || SYNC_ERROR_CODE.UNKNOWN;
+      throw error;
     }
 
     // Step 4: Clear pending state only if no failures remain
@@ -883,7 +887,9 @@ export async function restoreDeletedFromCloud(options = {}) {
 
     const downloadResult = await downloadFromCloud({ onProgress });
     if (!downloadResult.ok) {
-      throw new Error(`Download failed: ${downloadResult.errorCode}`);
+      const error = new Error(downloadResult.message || `Download failed: ${downloadResult.errorCode}`);
+      error.code = downloadResult.errorCode || SYNC_ERROR_CODE.UNKNOWN;
+      throw error;
     }
 
     await setState({ status: SYNC_STATE.CONNECTED_IDLE });

@@ -21,6 +21,7 @@ import { SYNC_CONFIG, SYNC_STATE, TEST_ERROR_CODE, SYNC_ERROR_CODE } from './syn
 import {
   getConfig,
   setConfig,
+  getAuth,
   getSettings,
   setSettings,
   getState,
@@ -63,6 +64,8 @@ async function populateFieldsFromStorage() {
   const config = await getConfig();
   const settings = await getSettings();
   const state = await getState();
+  const auth = await getAuth();
+  const signedIn = isSignedInState(state, auth);
 
   const projectUrlInput = document.getElementById('project-url-input');
   const anonKeyInput = document.getElementById('anon-key-input');
@@ -74,11 +77,11 @@ async function populateFieldsFromStorage() {
   if (projectUrlInput) projectUrlInput.value = config.projectUrl || '';
   if (anonKeyInput) anonKeyInput.value = config.anonKey || '';
   if (emailInput) emailInput.value = config.email || '';
-  if (autoSyncToggle) autoSyncToggle.checked = settings.autoSyncEnabled || false;
+  if (autoSyncToggle) autoSyncToggle.checked = !!(settings.autoSyncEnabled && signedIn);
   if (syncIntervalSelect) syncIntervalSelect.value = settings.syncIntervalMinutes || SYNC_CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES;
   if (verboseLoggingToggle) verboseLoggingToggle.checked = settings.verboseLogging || false;
 
-  updateAuthUI(state);
+  await updateAuthUI(state, auth);
 }
 
 // ============================================================================
@@ -151,12 +154,6 @@ function setupEventListeners() {
     restoreDeletedBtn.addEventListener('click', handleRestoreDeletedFromCloud);
   }
 
-  // Auto-sync: manual trigger (useful for testing without waiting interval)
-  const autoSyncNowBtn = document.getElementById('auto-sync-now-btn');
-  if (autoSyncNowBtn) {
-    autoSyncNowBtn.addEventListener('click', handleAutoSyncNow);
-  }
-
   // Auto-sync toggle
   const autoSyncToggle = document.getElementById('auto-sync-toggle');
   if (autoSyncToggle) {
@@ -176,12 +173,19 @@ function setupEventListeners() {
   }
 }
 
-function updateAuthUI(state) {
+function isSignedInState(state, auth) {
+  if (!auth || !auth.accessToken || !auth.refreshToken) return false;
+  if (state && state.status === SYNC_STATE.PAUSED_AUTH_REQUIRED) return false;
+  return true;
+}
+
+async function updateAuthUI(state, auth) {
   const signInSection = document.getElementById('sign-in-section');
   const signOutSection = document.getElementById('sign-out-section');
   const syncActionsSection = document.getElementById('sync-actions-section');
+  const signedInEmailEl = document.getElementById('signed-in-email');
 
-  const isSignedIn = state.status !== SYNC_STATE.NOT_CONFIGURED && state.status !== SYNC_STATE.PAUSED_AUTH_REQUIRED;
+  const isSignedIn = isSignedInState(state, auth);
 
   if (signInSection) {
     signInSection.classList.toggle('hidden', isSignedIn);
@@ -195,13 +199,21 @@ function updateAuthUI(state) {
     syncActionsSection.classList.toggle('hidden', !isSignedIn);
   }
 
+  if (signedInEmailEl) {
+    if (isSignedIn) {
+      const config = await getConfig();
+      signedInEmailEl.textContent = config.email || '—';
+    } else {
+      signedInEmailEl.textContent = '';
+    }
+  }
+
   // Disable auto-sync related controls until signed in
   const autoSyncToggle = document.getElementById('auto-sync-toggle');
   const syncIntervalSelect = document.getElementById('sync-interval-select');
-  const autoSyncNowBtn = document.getElementById('auto-sync-now-btn');
   const verboseLoggingToggle = document.getElementById('verbose-logging-toggle');
 
-  for (const el of [autoSyncToggle, syncIntervalSelect, autoSyncNowBtn, verboseLoggingToggle]) {
+  for (const el of [autoSyncToggle, syncIntervalSelect, verboseLoggingToggle]) {
     if (!el) continue;
     el.disabled = !isSignedIn;
     el.classList.toggle('opacity-50', !isSignedIn);
@@ -278,6 +290,14 @@ async function handleSignIn() {
     return;
   }
 
+  // Persist email for "Logged in as" display
+  try {
+    const currentConfig = await getConfig();
+    await setConfig({ ...currentConfig, email });
+  } catch {
+    // Best-effort only
+  }
+
   const btn = document.getElementById('sign-in-btn');
   if (btn) {
     btn.disabled = true;
@@ -299,8 +319,7 @@ async function handleSignIn() {
       passwordInput.value = '';
 
       // Update UI
-      const state = await getState();
-      updateAuthUI(state);
+      await populateFieldsFromStorage();
       await renderSyncStatus();
       await renderSyncHistory();
     } else {
@@ -315,40 +334,6 @@ async function handleSignIn() {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Sign In';
     }
-  }
-}
-
-async function handleAutoSyncNow() {
-  const btn = document.getElementById('auto-sync-now-btn');
-  if (!btn) return;
-
-  const state = await getState();
-  const isSignedIn = state.status !== SYNC_STATE.NOT_CONFIGURED && state.status !== SYNC_STATE.PAUSED_AUTH_REQUIRED;
-  if (!isSignedIn) {
-    showToast('Please sign in first', 'error');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Syncing...';
-
-  try {
-    const response = await chrome.runtime.sendMessage({ type: 'syncNowAuto' });
-
-    if (response.ok) {
-      showToast(`Synced ${response.synced} items successfully!`, 'success');
-      await renderSyncStatus();
-      await renderSyncHistory();
-    } else {
-      showToast(getErrorMessage(response.errorCode, response.message), 'error');
-    }
-  } catch (error) {
-    console.error('Auto sync now failed:', error);
-    showToast('Sync failed', 'error');
-  } finally {
-    hideProgressIndicator();
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-bolt mr-2"></i>Sync Now';
   }
 }
 
@@ -373,8 +358,7 @@ async function handleSignOut() {
       showToast('Signed out successfully', 'success');
 
       // Update UI
-      const state = await getState();
-      updateAuthUI(state);
+      await populateFieldsFromStorage();
       await renderSyncStatus();
     } else {
       showToast('Sign out failed', 'error');
@@ -642,8 +626,8 @@ async function handleAutoSyncToggle(event) {
   const enabled = event.target.checked;
 
   try {
-    const state = await getState();
-    const isSignedIn = state.status !== SYNC_STATE.NOT_CONFIGURED && state.status !== SYNC_STATE.PAUSED_AUTH_REQUIRED;
+    const [state, auth] = await Promise.all([getState(), getAuth()]);
+    const isSignedIn = isSignedInState(state, auth);
     if (!isSignedIn) {
       event.target.checked = false;
       showToast('Please sign in first', 'error');

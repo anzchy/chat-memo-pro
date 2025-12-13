@@ -299,6 +299,9 @@
    "signOut": {
       "message": "登出"
    },
+   "loggedInAs": {
+      "message": "已登录"
+   },
    "email": {
       "message": "邮箱"
    },

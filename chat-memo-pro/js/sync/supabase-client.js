@@ -14,6 +14,44 @@ import { getConfig, getAuth, setAuth, getState, setState } from './sync-config.j
 // HELPER FUNCTIONS
 // ============================================================================
 
+function decodeBase64Url(base64Url) {
+  const padded = String(base64Url).replace(/-/g, '+').replace(/_/g, '/')
+    .padEnd(Math.ceil(String(base64Url).length / 4) * 4, '=');
+  return atob(padded);
+}
+
+function getUserIdFromJwt(accessToken) {
+  try {
+    const parts = String(accessToken || '').split('.');
+    if (parts.length < 2) return null;
+    const payloadJson = decodeBase64Url(parts[1]);
+    const payload = JSON.parse(payloadJson);
+    return payload.sub || payload.user_id || payload.userId || null;
+  } catch {
+    return null;
+  }
+}
+
+async function buildHttpError(prefix, response) {
+  let message = '';
+  try {
+    const contentType = response.headers?.get?.('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const body = await response.json();
+      message = body?.message || body?.error || body?.details || JSON.stringify(body);
+    } else {
+      message = await response.text();
+    }
+  } catch {
+    // ignore
+  }
+
+  const status = response.status;
+  const statusText = response.statusText || '';
+  const suffix = message ? ` ${message}` : statusText ? ` ${statusText}` : '';
+  return new Error(`${prefix} (HTTP ${status})${suffix}`);
+}
+
 /**
  * Create fetch headers for Supabase API requests
  * @param {string} anonKey - Supabase anon/public key
@@ -153,7 +191,7 @@ export async function signIn(email, password) {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-      userId: data.user.id,
+      userId: data.user?.id || getUserIdFromJwt(data.access_token),
     };
 
     await setAuth(auth);
@@ -226,7 +264,7 @@ export async function refreshToken() {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-      userId: data.user.id,
+      userId: data.user?.id || getUserIdFromJwt(data.access_token) || auth.userId,
     };
 
     await setAuth(newAuth);
@@ -458,7 +496,7 @@ export async function selectConversationsSince(updatedAtCursor = null, limit = S
   let url = `${restUrl}/conversations?select=*&order=updated_at.asc&limit=${limit}`;
 
   if (updatedAtCursor) {
-    url += `&updated_at=gt.${updatedAtCursor}`;
+    url += `&updated_at=gt.${encodeURIComponent(updatedAtCursor)}`;
   }
 
   return await retryWithBackoff(async () => {
@@ -468,7 +506,7 @@ export async function selectConversationsSince(updatedAtCursor = null, limit = S
     });
 
     if (!response.ok) {
-      const error = new Error(`Failed to fetch conversations: ${response.statusText}`);
+      const error = await buildHttpError('Failed to fetch conversations', response);
       error.code = mapHttpErrorToCode(response.status);
       throw error;
     }
@@ -492,7 +530,7 @@ export async function selectMessagesSince(updatedAtCursor = null, limit = SYNC_C
   let url = `${restUrl}/messages?select=*&order=updated_at.asc&limit=${limit}`;
 
   if (updatedAtCursor) {
-    url += `&updated_at=gt.${updatedAtCursor}`;
+    url += `&updated_at=gt.${encodeURIComponent(updatedAtCursor)}`;
   }
 
   return await retryWithBackoff(async () => {
@@ -502,7 +540,7 @@ export async function selectMessagesSince(updatedAtCursor = null, limit = SYNC_C
     });
 
     if (!response.ok) {
-      const error = new Error(`Failed to fetch messages: ${response.statusText}`);
+      const error = await buildHttpError('Failed to fetch messages', response);
       error.code = mapHttpErrorToCode(response.status);
       throw error;
     }
@@ -526,8 +564,14 @@ export async function upsertConversations(conversations) {
   const accessToken = await ensureValidToken();
   const auth = await getAuth();
 
+  if (!auth.userId) {
+    const error = new Error('Missing user id in session');
+    error.code = TEST_ERROR_CODE.AUTH_REQUIRED;
+    throw error;
+  }
+
   const restUrl = `${projectUrl}/rest/v1`;
-  const url = `${restUrl}/conversations`;
+  const url = `${restUrl}/conversations?on_conflict=user_id,platform,platform_conversation_id`;
 
   // Add user_id and schema_version to all conversations
   const payload = conversations.map(conv => ({
@@ -544,13 +588,13 @@ export async function upsertConversations(conversations) {
       method: 'POST',
       headers: {
         ...createHeaders(anonKey, accessToken),
-        'Prefer': 'resolution=merge-duplicates',
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
       },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const error = new Error(`Failed to upsert conversations: ${response.statusText}`);
+      const error = await buildHttpError('Failed to upsert conversations', response);
       error.code = mapHttpErrorToCode(response.status);
       throw error;
     }
@@ -572,8 +616,14 @@ export async function upsertMessages(messages) {
   const accessToken = await ensureValidToken();
   const auth = await getAuth();
 
+  if (!auth.userId) {
+    const error = new Error('Missing user id in session');
+    error.code = TEST_ERROR_CODE.AUTH_REQUIRED;
+    throw error;
+  }
+
   const restUrl = `${projectUrl}/rest/v1`;
-  const url = `${restUrl}/messages`;
+  const url = `${restUrl}/messages?on_conflict=user_id,message_key`;
 
   // Add user_id and schema_version to all messages
   const payload = messages.map(msg => ({
@@ -590,13 +640,13 @@ export async function upsertMessages(messages) {
       method: 'POST',
       headers: {
         ...createHeaders(anonKey, accessToken),
-        'Prefer': 'resolution=merge-duplicates',
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
       },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const error = new Error(`Failed to upsert messages: ${response.statusText}`);
+      const error = await buildHttpError('Failed to upsert messages', response);
       error.code = mapHttpErrorToCode(response.status);
       throw error;
     }
