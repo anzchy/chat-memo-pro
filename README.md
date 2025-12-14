@@ -85,24 +85,85 @@ A powerful Chrome extension for capturing, organizing, and exporting conversatio
 
 ### Quick Setup
 
-1. **Create a Supabase Project**
-   - Visit [supabase.com](https://supabase.com) and create a free account
-   - Create a new project
-   - Note your Project URL and API Key (anon/public)
+#### 1. **Create a Supabase Project**
 
-2. **Run Database Migration**
-   - Go to SQL Editor in your Supabase dashboard
-   - Run the migration script from `specs/002-cloud-sync/supabase/migration.sql`
+   a. Visit [supabase.com](https://supabase.com) and create a free account (if you don't have one)
 
-3. **Configure Extension**
-   - Open the extension sidebar
-   - Navigate to Cloud Sync settings
-   - Enter your Project URL and API Key
-   - Sign in with your Supabase credentials
+   b. Click **"New Project"** and fill in:
+      - Project name (e.g., "chat-memo-sync")
+      - Database password (save this - you'll need it for database management)
+      - Region (choose closest to you)
 
-4. **Start Syncing**
-   - Click "Sync Now" for manual sync
-   - Or enable "Auto-sync" for automatic synchronization
+   c. Wait for project setup to complete (~2 minutes)
+
+#### 2. **Get Your Project Credentials**
+
+   a. **Find Project URL**:
+      - In your Supabase dashboard, click on your project
+      - Go to **Settings** (gear icon in left sidebar) → **API**
+      - Under "Project URL" section, copy the URL
+      - Example: `https://abcdefghijklmnop.supabase.co`
+
+   b. **Find Anon/Public API Key**:
+      - Same page (**Settings** → **API**)
+      - Under "Project API keys" section
+      - Copy the **`anon` `public`** key (NOT the `service_role` key)
+      - Example: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+#### 3. **Create Authentication User**
+
+   > ⚠️ **IMPORTANT**: This email/password is for the extension to sign in, NOT your Supabase account login!
+
+   a. In Supabase dashboard, go to **Authentication** (left sidebar) → **Users**
+
+   b. Click **"Add user"** → Select **"Create new user"**
+
+   c. Fill in:
+      - **Email**: Your email (can be same as Supabase account or different)
+      - **Password**: Create a strong password (this is what you'll use in the extension)
+      - Leave "Auto Confirm User" checked
+
+   d. Click **"Create user"**
+
+   e. **Save these credentials** - you'll need them in step 5!
+
+#### 4. **Run Database Migration**
+
+   a. In Supabase dashboard, go to **SQL Editor** (left sidebar)
+
+   b. Click **"New query"**
+
+   c. Copy and paste the entire content from `specs/002-cloud-sync/supabase/migration.sql`
+
+   d. Click **"Run"** (or press `Cmd/Ctrl + Enter`)
+
+   e. Verify success: You should see "Success. No rows returned" message
+
+   f. Confirm tables created:
+      - Go to **Table Editor** (left sidebar)
+      - You should see `conversations` and `messages` tables
+
+#### 5. **Configure Extension**
+
+   a. Open Chat Memo Pro extension sidebar
+
+   b. Navigate to **Cloud Sync** settings section
+
+   c. Enter your credentials from steps 2 and 3:
+      - **Project URL**: Paste from step 2a
+      - **API Key**: Paste from step 2b (the `anon public` key)
+      - **Email**: From step 3c (the user you created, NOT your Supabase account email)
+      - **Password**: From step 3c (the password you set for the user)
+
+   d. Click **"Test Connection"** to verify setup
+
+   e. If successful, you'll see "Connection successful" ✅
+
+#### 6. **Start Syncing**
+
+   - Click **"Sync Now"** for immediate manual sync
+   - Or enable **"Auto-sync"** and set interval (default: 15 minutes)
+   - Check **Sync Status** to see progress and results
 
 ### Sync Status Indicators
 
