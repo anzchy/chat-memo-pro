@@ -74,6 +74,7 @@ async function populateFieldsFromStorage() {
   const autoSyncToggle = document.getElementById('auto-sync-toggle');
   const syncIntervalSelect = document.getElementById('sync-interval-select');
   const verboseLoggingToggle = document.getElementById('verbose-logging-toggle');
+  const preventCloudDeletionToggle = document.getElementById('prevent-cloud-deletion-toggle');
 
   if (projectUrlInput) projectUrlInput.value = config.projectUrl || '';
   if (anonKeyInput) anonKeyInput.value = config.anonKey || '';
@@ -81,6 +82,7 @@ async function populateFieldsFromStorage() {
   if (autoSyncToggle) autoSyncToggle.checked = !!(settings.autoSyncEnabled && signedIn);
   if (syncIntervalSelect) syncIntervalSelect.value = settings.syncIntervalMinutes || SYNC_CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES;
   if (verboseLoggingToggle) verboseLoggingToggle.checked = settings.verboseLogging || false;
+  if (preventCloudDeletionToggle) preventCloudDeletionToggle.checked = settings.preventCloudDeletion || false;
 
   await updateAuthUI(state, auth);
 }
@@ -171,6 +173,12 @@ function setupEventListeners() {
   const verboseLoggingToggle = document.getElementById('verbose-logging-toggle');
   if (verboseLoggingToggle) {
     verboseLoggingToggle.addEventListener('change', handleVerboseLoggingToggle);
+  }
+
+  // Prevent cloud deletion toggle
+  const preventCloudDeletionToggle = document.getElementById('prevent-cloud-deletion-toggle');
+  if (preventCloudDeletionToggle) {
+    preventCloudDeletionToggle.addEventListener('change', handlePreventCloudDeletionToggle);
   }
 }
 
@@ -662,6 +670,9 @@ async function handleAutoSyncToggle(event) {
     });
 
     showToast(enabled ? 'Auto-sync enabled' : 'Auto-sync disabled', 'success');
+
+    // Refresh status panel to show updated state
+    await renderSyncStatus();
   } catch (error) {
     console.error('Failed to toggle auto-sync:', error);
     showToast('Failed to update auto-sync', 'error');
@@ -688,6 +699,9 @@ async function handleSyncIntervalChange(event) {
     });
 
     showToast('Sync interval updated', 'success');
+
+    // Refresh status panel to show updated next sync time
+    await renderSyncStatus();
   } catch (error) {
     console.error('Failed to update sync interval:', error);
     showToast('Failed to update interval', 'error');
@@ -706,6 +720,26 @@ async function handleVerboseLoggingToggle(event) {
   } catch (error) {
     console.error('Failed to toggle verbose logging:', error);
     showToast('Failed to update logging', 'error');
+  }
+}
+
+async function handlePreventCloudDeletionToggle(event) {
+  const enabled = event.target.checked;
+
+  try {
+    const settings = await getSettings();
+    settings.preventCloudDeletion = enabled;
+    await setSettings(settings);
+
+    showToast(
+      enabled
+        ? 'Cloud deletion prevented - cloud data will only increase'
+        : 'Cloud deletion allowed - deleted items will sync to cloud',
+      'success'
+    );
+  } catch (error) {
+    console.error('Failed to toggle prevent cloud deletion:', error);
+    showToast('Failed to update setting', 'error');
   }
 }
 

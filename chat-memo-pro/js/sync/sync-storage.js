@@ -182,8 +182,9 @@ export async function getLocalCounts() {
   return { conversations: conversations.length, messages };
 }
 
-export async function exportLocalChanges(cursors = {}) {
+export async function exportLocalChanges(cursors = {}, options = {}) {
   const { conversationsUpdatedAt, messagesUpdatedAt } = cursors;
+  const { preventCloudDeletion = false } = options;
   const allConversations = await getAllLocalConversations();
 
   const exportedConversations = [];
@@ -192,6 +193,11 @@ export async function exportLocalChanges(cursors = {}) {
   for (const conv of allConversations) {
     const convUpdatedAt = conv.updatedAt || conv.createdAt;
     const convChanged = !conversationsUpdatedAt || isNewerIso(convUpdatedAt, conversationsUpdatedAt);
+
+    // Skip deleted conversations if preventCloudDeletion is enabled
+    if (preventCloudDeletion && conv.deletedAt) {
+      continue;
+    }
 
     if (convChanged || conv.deletedAt) {
       exportedConversations.push(await mapLocalConversationToCloud(conv));
@@ -205,6 +211,11 @@ export async function exportLocalChanges(cursors = {}) {
         const msg = conv.messages[i];
         const msgTime = getLocalMessageTime(msg, convUpdatedAt);
         const msgChanged = !messagesUpdatedAt || isNewerIso(msgTime, messagesUpdatedAt);
+
+        // Skip deleted messages if preventCloudDeletion is enabled
+        if (preventCloudDeletion && msg.deletedAt) {
+          continue;
+        }
 
         if (msgChanged || msg.deletedAt) {
           exportedMessages.push(await mapLocalMessageToCloud(platform, stableConvId, conv, msg, i));

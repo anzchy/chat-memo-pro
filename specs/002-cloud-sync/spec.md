@@ -387,3 +387,137 @@ The system MUST display these exact user-facing messages (localized later):
 - **Supabase services used**: Auth (email/password), PostgREST API, PostgreSQL (with RLS).
 - **Browser APIs required**: `chrome.storage.local`, `chrome.idle`, `chrome.alarms`, `chrome.runtime` messaging, and IndexedDB (existing local storage).
 - **Minimum browser**: Chrome supporting Manifest V3 and the APIs above (Chrome 88+ recommended by plan).
+
+---
+
+## Post-Release Updates
+
+### December 2025 - Bug Fixes & Improvements
+
+#### Update 1: Extended Platform Support for Auto-Saving Indicator
+
+**Date**: 2025-12-14
+**Category**: Feature Enhancement
+**Related FR**: N/A (Extension of existing auto-save capture feature)
+
+**Changes**:
+- Extended auto-saving indicator support to include Manus (https://manus.im) and Genspark (https://www.genspark.ai) platforms
+- Users on these platforms now see the visual auto-saving indicator during conversation capture
+
+**Implementation**:
+- Modified `chat-memo-pro/js/content_common.js` to include both platforms in the `supportedPlatforms` array
+- No changes to sync functionality; purely a UX enhancement for consistency across all supported platforms
+
+**Impact**: Improved user confidence and consistency - all 11 supported platforms now show the same auto-saving feedback
+
+---
+
+#### Update 2: Automatic Sidebar Refresh After Cloud Operations
+
+**Date**: 2025-12-14
+**Category**: Bug Fix
+**Related FR**: FR-014 (Manual Sync), FR-027 (Download from Cloud), FR-033 (Replace Local)
+
+**Issue**: After successful cloud sync operations (Download from Cloud, Replace Local with Cloud, Sync Now), the conversation list in the sidebar did not refresh automatically, requiring users to manually reload the page to see changes.
+
+**Root Cause**: Sync operations correctly updated IndexedDB but did not trigger the existing sidebar refresh notification mechanism.
+
+**Fix**:
+- Added `notifySidebarRefresh()` calls to all sync operation handlers in `chat-memo-pro/js/background.js`:
+  - `downloadFromCloud` handler
+  - `replaceLocal` handler
+  - `syncNow` handler (conditional on items synced)
+  - `syncNowAuto` handler (conditional on items synced)
+
+**Impact**: Immediate visual feedback - conversation list now updates automatically after successful cloud operations without requiring page reload
+
+---
+
+#### Update 3: Corrected Auto-Sync Status Display
+
+**Date**: 2025-12-14
+**Category**: Bug Fix
+**Related FR**: FR-015 (Sync Status Panel), FR-028 (Auto-Sync Toggle)
+
+**Issue**: Status panel displayed "Auto-sync: Disabled" and "Next sync: —" even when auto-sync was enabled and actively running in the background (confirmed by console logs showing scheduled sync executions).
+
+**Root Cause**: Settings toggle handlers (`handleAutoSyncToggle`, `handleSyncIntervalChange`) correctly updated chrome.storage.local and notified the background script, but did not refresh the status panel UI to reflect the new state.
+
+**Fix**:
+- Added `await renderSyncStatus()` calls at the end of both handler functions in `chat-memo-pro/js/sync/sync-ui-controller.js`
+- Status panel now immediately refreshes to show:
+  - Correct "Auto-sync: Enabled/Disabled" state
+  - Updated "Next sync:" timestamp when interval changes
+
+**Impact**: Accurate real-time status display - users can now trust the status panel to reflect the actual auto-sync state and schedule
+
+---
+
+#### Update 4: Export Wizard Cloud Sync Status Integration
+
+**Date**: 2025-12-14
+**Category**: Feature Enhancement
+**Related FR**: FR-027 (Download from Cloud), Export Wizard (Feature 001)
+
+**Issue**: Users could export incomplete data if they forgot to sync from cloud first. Export Wizard had no visibility into cloud sync status, potentially leading to data loss when exporting from a new device or after switching browsers.
+
+**Implementation**:
+- Added sync status panel to Export Wizard Step 1 (time range selection)
+- Displays local conversation count and cloud conversation count side-by-side
+- Shows warning when cloud has more conversations than local storage
+- Provides two action buttons:
+  - **Sync then Export**: Downloads cloud data, refreshes conversation list, then continues with export
+  - **Export Local Only**: Dismisses warning and exports only local data
+
+**Technical Details**:
+- `checkSyncStatus()` method in exportWizard: Fetches cloud counts via `getCloudCounts` API
+- `syncThenExport()` method: Calls `downloadFromCloud`, reloads conversations, updates preview
+- Sync status panel only shown if cloud sync is configured and signed in
+- Files modified: `chat-memo-pro/html/popup.html`, `chat-memo-pro/js/popup.js`
+
+**Impact**:
+- Prevents accidental export of incomplete data
+- Improves user awareness of data availability across devices
+- Ensures exported data matches cloud state when needed
+
+---
+
+#### Update 5: Prevent Cloud Deletion Option
+
+**Date**: 2025-12-14
+**Category**: Feature Enhancement
+**Related FR**: FR-024 (Delete Propagation), FR-023 (Data Safety)
+
+**Issue**: Users switching devices or browsers worried about accidentally deleting cloud data. When using multiple devices, local deletions would propagate to cloud and affect all devices. Users requested a "cloud-only backup" mode where cloud data only grows, never shrinks.
+
+**Solution**: Added `preventCloudDeletion` setting that blocks deletion tombstones from uploading to cloud.
+
+**Implementation**:
+- New setting: `preventCloudDeletion` (boolean, default: false)
+- Modified `exportLocalChanges()` to accept `options.preventCloudDeletion`
+- When enabled:
+  - Conversations with `deletedAt` timestamp are skipped during export
+  - Messages with `deletedAt` timestamp are skipped during export
+  - Only new and updated items are uploaded to cloud
+- `uploadToCloud()` reads setting and passes to `exportLocalChanges()`
+- UI toggle added to Cloud Sync Settings → Advanced section
+
+**Technical Details**:
+- Settings schema: `sync-config.js` line 182
+- Export logic: `sync-storage.js` lines 197-200, 216-218
+- Sync engine integration: `sync-engine.js` lines 247-254
+- UI: `popup.html` lines 1325-1334, `sync-ui-controller.js` lines 726-744
+
+**Use Cases**:
+- **Multi-device with cloud backup**: Enable this setting to treat cloud as "append-only" backup. Local deletions won't affect cloud or other devices.
+- **Browser switching**: Export all cloud data to new browser without worrying about local cleanup affecting cloud state.
+- **Accidental deletion protection**: Cloud becomes permanent archive, immune to local deletion mistakes.
+
+**Impact**:
+- Cloud data becomes safer and more predictable
+- Users can confidently use multiple devices without sync conflicts
+- Prevents data loss scenarios when switching browsers/devices
+
+---
+
+**All updates maintain backward compatibility with existing cloud sync data and configurations. No migration or user action required.**

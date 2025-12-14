@@ -242,12 +242,16 @@ export async function uploadToCloud(options = {}) {
     const existingPending = await getPending();
     let tombstones = Array.isArray(existingPending.tombstones) ? existingPending.tombstones : [];
 
-    // Get cursors
+    // Get cursors and settings
     const cursors = await getCursors();
+    const settings = await getSettings();
     console.log('Sync: Current cursors', cursors);
+    console.log('Sync: Prevent cloud deletion:', settings.preventCloudDeletion);
 
-    // Export local changes
-    const changes = await SyncStorage.exportLocalChanges(cursors);
+    // Export local changes (skip deleted items if preventCloudDeletion is enabled)
+    const changes = await SyncStorage.exportLocalChanges(cursors, {
+      preventCloudDeletion: settings.preventCloudDeletion
+    });
     let { conversations, messages } = changes;
 
     console.log(`Sync: Exporting ${conversations.length} conversations, ${messages.length} messages`);

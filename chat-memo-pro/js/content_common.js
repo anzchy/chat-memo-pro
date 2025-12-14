@@ -35,7 +35,9 @@ function shouldShowFloatTag() {
     'https://aistudio.google.com',
     'https://kimi.moonshot.cn',
     'https://kimi.com',
-    'https://www.kimi.com'
+    'https://www.kimi.com',
+    'https://manus.im',
+    'https://www.genspark.ai'
   ];
 
   return supportedPlatforms.some(platform => url.startsWith(platform));

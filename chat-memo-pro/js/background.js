@@ -401,6 +401,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         onProgress: (event) => broadcastSyncProgress(event),
       })
         .then(result => {
+          if (result.ok && result.synced > 0) {
+            notifySidebarRefresh();
+          }
           sendResponse(result);
         })
         .catch(error => {
@@ -415,6 +418,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         onProgress: (event) => broadcastSyncProgress(event),
       })
         .then(result => {
+          if (result.ok && result.synced > 0) {
+            notifySidebarRefresh();
+          }
           sendResponse(result);
         })
         .catch(error => {
@@ -428,6 +434,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         onProgress: (event) => broadcastSyncProgress(event),
       })
         .then(result => {
+          if (result.ok) {
+            notifySidebarRefresh();
+          }
           sendResponse(result);
         })
         .catch(error => {
@@ -441,6 +450,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         onProgress: (event) => broadcastSyncProgress(event),
       })
         .then(result => {
+          if (result.ok) {
+            notifySidebarRefresh();
+          }
           sendResponse(result);
         })
         .catch(error => {

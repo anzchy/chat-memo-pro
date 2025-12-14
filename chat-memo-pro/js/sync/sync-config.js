@@ -179,6 +179,7 @@ export async function getSettings() {
     autoSyncEnabled: false,
     syncIntervalMinutes: SYNC_CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES,
     verboseLogging: false,
+    preventCloudDeletion: false, // Prevent deleting cloud data from extension
   };
 }
 

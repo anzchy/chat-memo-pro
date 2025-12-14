@@ -3666,23 +3666,31 @@ const exportWizard = {
     closeBtn: document.getElementById('close-export-wizard'),
     cancelBtn: document.getElementById('cancel-export-wizard'),
     startBtn: document.getElementById('start-export-btn'),
-    
+
     // Time Range
     timeOptions: document.querySelectorAll('.export-time-option'),
     customDateContainer: document.getElementById('export-custom-date'),
     startDateInput: document.getElementById('export-start-date'),
     endDateInput: document.getElementById('export-end-date'),
-    
+
     // Mode
     modeOptions: document.querySelectorAll('.export-mode-option'),
-    
+
     // Format
     formatOptions: document.querySelectorAll('.export-format-option'),
-    
+
     // Preview
     previewCount: document.getElementById('preview-count'),
     previewSize: document.getElementById('preview-size'),
-    previewFormat: document.getElementById('preview-format')
+    previewFormat: document.getElementById('preview-format'),
+
+    // Sync Status
+    syncStatusContainer: document.getElementById('export-sync-status'),
+    localCountEl: document.getElementById('export-local-count'),
+    cloudCountEl: document.getElementById('export-cloud-count'),
+    syncWarning: document.getElementById('export-sync-warning'),
+    syncThenExportBtn: document.getElementById('export-sync-then-export'),
+    exportLocalOnlyBtn: document.getElementById('export-local-only')
   },
   
   /**
@@ -3733,6 +3741,14 @@ const exportWizard = {
     this.elements.formatOptions.forEach(btn => {
       btn.addEventListener('click', () => this.selectFormat(btn.dataset.value));
     });
+
+    // Sync Status Buttons
+    if (this.elements.syncThenExportBtn) {
+      this.elements.syncThenExportBtn.addEventListener('click', () => this.syncThenExport());
+    }
+    if (this.elements.exportLocalOnlyBtn) {
+      this.elements.exportLocalOnlyBtn.addEventListener('click', () => this.hideSyncWarning());
+    }
   },
   
   /**
@@ -3743,6 +3759,7 @@ const exportWizard = {
     this.selectMode(initialMode);
     this.updatePreview();
     this.validateForm();
+    this.checkSyncStatus(); // Check cloud sync status
     this.elements.modal.classList.remove('hidden');
   },
   
@@ -3992,6 +4009,123 @@ const exportWizard = {
         console.error("Export failed", err);
         buttonManager.setError();
       });
+  },
+
+  /**
+   * Check cloud sync status and display data counts
+   */
+  async checkSyncStatus() {
+    try {
+      // Get local conversation count
+      const localCount = allConversations ? allConversations.length : 0;
+
+      // Try to get cloud conversation count
+      let cloudCount = null;
+      let cloudSyncConfigured = false;
+
+      try {
+        const cloudCountsResponse = await chrome.runtime.sendMessage({ type: 'getCloudCounts' });
+        if (cloudCountsResponse && cloudCountsResponse.ok) {
+          cloudCount = cloudCountsResponse.conversations;
+          cloudSyncConfigured = true;
+        }
+      } catch (error) {
+        // Cloud sync not configured or error fetching - this is fine
+        console.log('Cloud sync not available:', error);
+      }
+
+      // Update UI
+      if (this.elements.localCountEl) {
+        this.elements.localCountEl.textContent = localCount;
+      }
+
+      if (cloudSyncConfigured && cloudCount !== null) {
+        // Show sync status container
+        if (this.elements.syncStatusContainer) {
+          this.elements.syncStatusContainer.classList.remove('hidden');
+        }
+
+        if (this.elements.cloudCountEl) {
+          this.elements.cloudCountEl.textContent = cloudCount;
+        }
+
+        // Show warning if cloud has more data
+        if (cloudCount > localCount && this.elements.syncWarning) {
+          this.elements.syncWarning.classList.remove('hidden');
+        }
+      } else {
+        // Cloud sync not configured - hide sync status
+        if (this.elements.syncStatusContainer) {
+          this.elements.syncStatusContainer.classList.add('hidden');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking sync status:', error);
+    }
+  },
+
+  /**
+   * Sync from cloud then continue with export
+   */
+  async syncThenExport() {
+    try {
+      // Disable button
+      const btn = this.elements.syncThenExportBtn;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...';
+      }
+
+      // Call download from cloud
+      const response = await chrome.runtime.sendMessage({ type: 'downloadFromCloud' });
+
+      if (response && response.ok) {
+        // Sync successful - reload conversations and update UI
+        await loadConversations();
+
+        // Update sync status display
+        await this.checkSyncStatus();
+
+        // Hide warning
+        if (this.elements.syncWarning) {
+          this.elements.syncWarning.classList.add('hidden');
+        }
+
+        // Re-enable button
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Sync then Export';
+        }
+
+        // Show success message
+        showNotification('Cloud sync completed successfully!', 'success');
+
+        // Update preview with new data
+        this.updatePreview();
+      } else {
+        throw new Error(response.message || 'Sync failed');
+      }
+    } catch (error) {
+      console.error('Sync then export failed:', error);
+
+      // Re-enable button
+      const btn = this.elements.syncThenExportBtn;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Sync then Export';
+      }
+
+      showNotification('Sync failed: ' + error.message, 'error');
+    }
+  },
+
+  /**
+   * Hide sync warning and continue with local export only
+   */
+  hideSyncWarning() {
+    if (this.elements.syncWarning) {
+      this.elements.syncWarning.classList.add('hidden');
+    }
   }
 };
 

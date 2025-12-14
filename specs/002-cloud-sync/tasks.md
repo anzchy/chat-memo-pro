@@ -119,7 +119,29 @@
 
 ---
 
-## Phase 10: Manual QA (Quickstart)
+## Phase 10: Post-Release Bug Fixes & Improvements
+
+**Purpose**: Address bugs and usability issues discovered after initial release
+
+- [X] T046-BF1 Add auto-saving indicator support for Manus and Genspark platforms in `chat-memo-pro/js/content_common.js`
+  - **Issue**: Auto-saving float tag only appeared on original supported platforms, not on Manus (https://manus.im) or Genspark (https://www.genspark.ai)
+  - **Fix**: Added both platforms to `supportedPlatforms` array in `shouldShowFloatTag()` function
+  - **Impact**: Users on Manus and Genspark now see the auto-saving indicator when conversations are being saved
+
+- [X] T046-BF2 Fix Download from Cloud and Replace Local buttons not refreshing conversation list in `chat-memo-pro/js/background.js`
+  - **Issue**: After clicking "Download from Cloud" or "Replace Local with Cloud", the conversation list in sidebar did not refresh automatically, requiring manual page reload
+  - **Fix**: Added `notifySidebarRefresh()` calls to `downloadFromCloud` (line 432), `replaceLocal` (line 448), `syncNow` (lines 404-405), and `syncNowAuto` (lines 421-422) handlers
+  - **Impact**: Conversation list now automatically refreshes after successful cloud sync operations, providing immediate visual feedback
+
+- [X] T046-BF3 Fix auto-sync status display showing "Disabled" when actually enabled in `chat-memo-pro/js/sync/sync-ui-controller.js`
+  - **Issue**: Status panel showed "Auto-sync: Disabled" and "Next sync: —" even when auto-sync was enabled and running in background (confirmed by console logs showing auto-sync executing)
+  - **Root Cause**: `handleAutoSyncToggle()` and `handleSyncIntervalChange()` functions updated settings but didn't refresh the status panel
+  - **Fix**: Added `await renderSyncStatus()` calls at the end of both handler functions (lines 667, 696) to immediately refresh status panel after settings change
+  - **Impact**: Status panel now accurately reflects current auto-sync state and displays correct "Next sync" time
+
+---
+
+## Phase 11: Manual QA (Quickstart)
 
 **Purpose**: Validate all success criteria (SC-001 through SC-010) are met
 
