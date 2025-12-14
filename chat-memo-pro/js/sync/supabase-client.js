@@ -624,8 +624,17 @@ export async function upsertConversations(conversations) {
   const restUrl = `${projectUrl}/rest/v1`;
   const url = `${restUrl}/conversations?on_conflict=user_id,platform,platform_conversation_id`;
 
+  // Deduplicate conversations by (platform, platform_conversation_id)
+  // Keep the last one (most recent) in case of duplicates
+  const deduped = new Map();
+  for (const conv of conversations) {
+    const key = `${conv.platform}|${conv.platform_conversation_id}`;
+    deduped.set(key, conv);
+  }
+  const uniqueConversations = Array.from(deduped.values());
+
   // Add user_id and schema_version to all conversations
-  const payload = conversations.map(conv => ({
+  const payload = uniqueConversations.map(conv => ({
     ...conv,
     user_id: auth.userId,
     metadata: {
@@ -676,8 +685,16 @@ export async function upsertMessages(messages) {
   const restUrl = `${projectUrl}/rest/v1`;
   const url = `${restUrl}/messages?on_conflict=user_id,message_key`;
 
+  // Deduplicate messages by message_key
+  // Keep the last one (most recent) in case of duplicates
+  const deduped = new Map();
+  for (const msg of messages) {
+    deduped.set(msg.message_key, msg);
+  }
+  const uniqueMessages = Array.from(deduped.values());
+
   // Add user_id and schema_version to all messages
-  const payload = messages.map(msg => ({
+  const payload = uniqueMessages.map(msg => ({
     ...msg,
     user_id: auth.userId,
     metadata: {

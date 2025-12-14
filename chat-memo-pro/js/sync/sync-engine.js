@@ -19,6 +19,8 @@ import { SYNC_CONFIG, SYNC_STATE, SYNC_ERROR_CODE } from './sync-config.js';
 import {
   getSettings,
   setSettings,
+  getConfig,
+  getAuth,
   getCursors,
   setCursors,
   getState,
@@ -100,6 +102,39 @@ export async function syncNow(options = {}) {
 
     // Step 1: Refresh token if needed
     await SupabaseClient.refreshToken();
+
+    // Step 1.5: Detect account/project switch and reset cursors if changed
+    const auth = await getAuth();
+    const config = await getConfig();
+    const cursors = await getCursors();
+
+    const currentUserId = auth.userId;
+    const currentProjectUrl = config.projectUrl;
+    const lastSyncedUserId = cursors.lastSyncedUserId;
+    const lastSyncedProjectUrl = cursors.lastSyncedProjectUrl;
+
+    const userChanged = lastSyncedUserId && currentUserId && lastSyncedUserId !== currentUserId;
+    const projectChanged = lastSyncedProjectUrl && currentProjectUrl && lastSyncedProjectUrl !== currentProjectUrl;
+
+    if (userChanged || projectChanged) {
+      const reason = userChanged ?
+        `user changed from ${lastSyncedUserId} to ${currentUserId}` :
+        `project changed from ${lastSyncedProjectUrl} to ${currentProjectUrl}`;
+      console.log(`Sync: Account/project switch detected (${reason}), resetting cursors`);
+      await setCursors({
+        lastSyncedUserId: currentUserId,
+        lastSyncedProjectUrl: currentProjectUrl,
+      });
+      await clearPending();
+    } else if (!lastSyncedUserId || !lastSyncedProjectUrl) {
+      // First sync - store the current user and project
+      console.log('Sync: First sync, storing user and project info');
+      await setCursors({
+        ...cursors,
+        lastSyncedUserId: currentUserId,
+        lastSyncedProjectUrl: currentProjectUrl,
+      });
+    }
 
     // Step 2: Upload local changes
     const uploadResult = await uploadToCloud({ onProgress });
@@ -209,12 +244,16 @@ export async function uploadToCloud(options = {}) {
 
     // Get cursors
     const cursors = await getCursors();
+    console.log('Sync: Current cursors', cursors);
 
     // Export local changes
     const changes = await SyncStorage.exportLocalChanges(cursors);
     let { conversations, messages } = changes;
 
+    console.log(`Sync: Exporting ${conversations.length} conversations, ${messages.length} messages`);
+
     if (conversations.length === 0 && messages.length === 0 && tombstones.length === 0) {
+      console.log('Sync: No changes to upload');
       return {
         ok: true,
         direction: 'upload',
@@ -300,8 +339,10 @@ export async function uploadToCloud(options = {}) {
       }
 
       try {
+        console.log(`Sync: Uploading conversation batch ${i / SYNC_CONFIG.CONVERSATION_BATCH_SIZE + 1}, size: ${batch.length}`);
         await SupabaseClient.upsertConversations(batch);
         syncedConvs += batch.length;
+        console.log(`Sync: Successfully uploaded ${batch.length} conversations (total: ${syncedConvs})`);
       } catch (error) {
         console.error('Sync: Failed to upload conversation batch', error);
         failed += batch.length;
@@ -335,8 +376,10 @@ export async function uploadToCloud(options = {}) {
       }
 
       try {
+        console.log(`Sync: Uploading message batch ${i / SYNC_CONFIG.MESSAGE_BATCH_SIZE + 1}, size: ${batch.length}`);
         await SupabaseClient.upsertMessages(batch);
         syncedMsgs += batch.length;
+        console.log(`Sync: Successfully uploaded ${batch.length} messages (total: ${syncedMsgs})`);
       } catch (error) {
         console.error('Sync: Failed to upload message batch', error);
         failed += batch.length;
@@ -354,6 +397,57 @@ export async function uploadToCloud(options = {}) {
       failedItemKeys,
       tombstones,
     });
+
+    // Auto-retry failed items once if there are any
+    if (failedItemKeys.length > 0 && failedItemKeys.length <= 10) {
+      console.log(`Sync: Auto-retrying ${failedItemKeys.length} failed items`);
+      const retryItems = await SyncStorage.exportLocalItemsByKeys(failedItemKeys);
+      const stillFailed = [];
+
+      // Retry conversations
+      if (retryItems.conversations.length > 0) {
+        try {
+          console.log(`Sync: Retrying ${retryItems.conversations.length} conversations`);
+          await SupabaseClient.upsertConversations(retryItems.conversations);
+          syncedConvs += retryItems.conversations.length;
+          failed -= retryItems.conversations.length;
+          console.log(`Sync: Successfully retried ${retryItems.conversations.length} conversations`);
+        } catch (error) {
+          console.error('Sync: Retry failed for conversations', error);
+          for (const row of retryItems.conversations) {
+            stillFailed.push(`conv:${row.platform}|${row.platform_conversation_id}`);
+          }
+        }
+      }
+
+      // Retry messages
+      if (retryItems.messages.length > 0) {
+        try {
+          console.log(`Sync: Retrying ${retryItems.messages.length} messages`);
+          await SupabaseClient.upsertMessages(retryItems.messages);
+          syncedMsgs += retryItems.messages.length;
+          failed -= retryItems.messages.length;
+          console.log(`Sync: Successfully retried ${retryItems.messages.length} messages`);
+        } catch (error) {
+          console.error('Sync: Retry failed for messages', error);
+          for (const row of retryItems.messages) {
+            stillFailed.push(`msg:${row.message_key}`);
+          }
+        }
+      }
+
+      // Update pending with retry results
+      await setPending({
+        ...existingPending,
+        inProgress: false,
+        direction: 'upload',
+        lastProgress: null,
+        failedItemKeys: stillFailed,
+        tombstones,
+      });
+    }
+
+    console.log(`Sync: Upload complete - synced: ${syncedConvs + syncedMsgs}, failed: ${failed}`);
 
     return {
       ok: true,

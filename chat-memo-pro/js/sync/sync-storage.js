@@ -142,7 +142,16 @@ function roleToSender(role) {
 }
 
 function getLocalMessageTime(localMsg, fallbackIso) {
-  return localMsg.updatedAt || localMsg.timestamp || localMsg.createdAt || fallbackIso;
+  const time = localMsg.updatedAt || localMsg.timestamp || localMsg.createdAt || fallbackIso;
+  // Convert Unix timestamp in milliseconds to ISO string
+  if (typeof time === 'number') {
+    return new Date(time).toISOString();
+  }
+  // If it's a string that looks like a Unix timestamp in milliseconds
+  if (typeof time === 'string' && /^\d{13,}$/.test(time)) {
+    return new Date(parseInt(time, 10)).toISOString();
+  }
+  return time;
 }
 
 function getCloudMessageTime(cloudMsg) {
