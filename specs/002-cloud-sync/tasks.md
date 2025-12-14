@@ -77,19 +77,19 @@
 
 ## Phase 5: US3 – Auto-Sync Scheduler (P2)
 
-- [ ] T029 [US3] Implement auto-sync toggle + interval UI (min 5m, max 24h, default 15m) in `chat-memo-pro/html/popup.html` + `chat-memo-pro/js/sync/sync-ui-controller.js`
-- [ ] T030 [US3] Implement background scheduler in `chat-memo-pro/js/background.js` per `specs/002-cloud-sync/contracts/background-scheduler.md` (chrome.alarms, chrome.idle gating, interval change rules)
-- [ ] T031 [US3] Ensure auto-sync is single-flight and never starts while manual sync is running; record history entries with `type=auto`
-- [ ] T032 [US3] Ensure auto-sync pauses on `AuthRequired`/`CloudLimit`/`LocalQuotaExceeded` until user resolves and retries successfully
+- [X] T029 [US3] Implement auto-sync toggle + interval UI (min 5m, max 24h, default 15m) in `chat-memo-pro/html/popup.html` + `chat-memo-pro/js/sync/sync-ui-controller.js`
+- [X] T030 [US3] Implement background scheduler in `chat-memo-pro/js/background.js` per `specs/002-cloud-sync/contracts/background-scheduler.md` (chrome.alarms, chrome.idle gating, interval change rules)
+- [X] T031 [US3] Ensure auto-sync is single-flight and never starts while manual sync is running; record history entries with `type=auto`
+- [X] T032 [US3] Ensure auto-sync pauses on `AuthRequired`/`CloudLimit`/`LocalQuotaExceeded` until user resolves and retries successfully
 
 ---
 
 ## Phase 6: US4 – Cross-Device Download + Replace Local (P2)
 
-- [ ] T033 [US4] Implement `downloadFromCloud()` in `chat-memo-pro/js/sync/sync-engine.js` with pagination + resume via cursors; merge without duplicates based on stable keys
-- [ ] T034 [US4] Implement `replaceLocalWithCloud()` in `chat-memo-pro/js/sync/sync-engine.js` (destructive confirm, wipe local conversations/messages, then download)
-- [ ] T035 [US4] Implement local quota exceeded handling during merges (pause with “Sync paused — local storage is full”, keep auto-sync disabled)
-- [ ] T036 [US4] Implement invalid/corrupted row handling: skip, count warnings, continue; verbose logs include details without secrets
+- [X] T033 [US4] Implement `downloadFromCloud()` in `chat-memo-pro/js/sync/sync-engine.js` with pagination + resume via cursors; merge without duplicates based on stable keys
+- [X] T034 [US4] Implement `replaceLocalWithCloud()` in `chat-memo-pro/js/sync/sync-engine.js` (destructive confirm, wipe local conversations/messages, then download)
+- [X] T035 [US4] Implement local quota exceeded handling during merges (pause with “Sync paused — local storage is full”, keep auto-sync disabled)
+- [X] T036 [US4] Implement invalid/corrupted row handling: skip, count warnings, continue; verbose logs include details without secrets
 
 **Checkpoint**: Quickstart cross-device test §5 in `specs/002-cloud-sync/quickstart.md`
 
@@ -97,25 +97,25 @@
 
 ## Phase 7: US5 – Status + History + Verbose Logging (P3)
 
-- [ ] T037 [US5] Implement status panel rendering per `specs/002-cloud-sync/contracts/ui-contract.md` (state, last/next sync, local/cloud counts best-effort)
-- [ ] T038 [US5] Implement sync history UI rendering (last 20 entries, expandable error details, no secret leakage)
-- [ ] T039 [US5] Implement verbose logging toggle and ensure all logs redact secrets (apikey/tokens)
-- [ ] T040 [US5] Implement warning badges mapping: cloud limit, auth required, local storage full, schema mismatch, cloud unavailable
+- [X] T037 [US5] Implement status panel rendering per `specs/002-cloud-sync/contracts/ui-contract.md` (state, last/next sync, local/cloud counts best-effort)
+- [X] T038 [US5] Implement sync history UI rendering (last 20 entries, expandable error details, no secret leakage)
+- [X] T039 [US5] Implement verbose logging toggle and ensure all logs redact secrets (apikey/tokens)
+- [X] T040 [US5] Implement warning badges mapping: cloud limit, auth required, local storage full, schema mismatch, cloud unavailable
 
 ---
 
 ## Phase 8: Deletes & Restore (Release-Blocking)
 
-- [ ] T041 Implement tombstone delete propagation: when local delete occurs in `chat-memo-pro/js/background.js`, persist a tombstone record in `cloudSync.pending` so deletion can be uploaded even after local row removal (FR-024)
-- [ ] T042 Implement minimal restore: add “Restore Deleted (Cloud)” action in sync settings that clears `deleted_at` for tombstoned conversations in cloud and then downloads (FR-024)
+- [X] T041 Implement tombstone delete propagation: when local delete occurs in `chat-memo-pro/js/background.js`, persist a tombstone record in `cloudSync.pending` so deletion can be uploaded even after local row removal (FR-024)
+- [X] T042 Implement minimal restore: add “Restore Deleted (Cloud)” action in sync settings that clears `deleted_at` for tombstoned conversations in cloud and then downloads (FR-024)
 
 ---
 
 ## Phase 9: Recovery Actions (Release-Blocking)
 
-- [ ] T043 Implement “Reset Sync State” (clear cursors/history/pending, keep auth/config) per `specs/002-cloud-sync/contracts/sync-api.md` and `specs/002-cloud-sync/spec.md` FR-034
-- [ ] T044 Implement “Force Full Re-sync” (set cursors to epoch) per FR-034
-- [ ] T045 Implement “Retry Failed Items” (re-run only failed keys/batches) per FR-031
+- [X] T043 Implement “Reset Sync State” (clear cursors/history/pending, keep auth/config) per `specs/002-cloud-sync/contracts/sync-api.md` and `specs/002-cloud-sync/spec.md` FR-034
+- [X] T044 Implement “Force Full Re-sync” (set cursors to epoch) per FR-034
+- [X] T045 Implement “Retry Failed Items” (re-run only failed keys/batches) per FR-031
 
 ---
 

@@ -30,6 +30,7 @@ import {
   getPending,
 } from './sync-config.js';
 import { SUPABASE_SCHEMA_SQL } from './schema-sql.js';
+import * as SyncStorage from './sync-storage.js';
 
 // ============================================================================
 // STATE
@@ -213,11 +214,27 @@ async function updateAuthUI(state, auth) {
   const syncIntervalSelect = document.getElementById('sync-interval-select');
   const verboseLoggingToggle = document.getElementById('verbose-logging-toggle');
 
-  for (const el of [autoSyncToggle, syncIntervalSelect, verboseLoggingToggle]) {
-    if (!el) continue;
-    el.disabled = !isSignedIn;
-    el.classList.toggle('opacity-50', !isSignedIn);
-    el.classList.toggle('cursor-not-allowed', !isSignedIn);
+  const isPaused = !!(state && String(state.status).startsWith('Paused'));
+
+  if (autoSyncToggle) {
+    const disabled = !isSignedIn || isPaused;
+    autoSyncToggle.disabled = disabled;
+    autoSyncToggle.classList.toggle('opacity-50', disabled);
+    autoSyncToggle.classList.toggle('cursor-not-allowed', disabled);
+  }
+
+  if (syncIntervalSelect) {
+    const disabled = !isSignedIn || isPaused;
+    syncIntervalSelect.disabled = disabled;
+    syncIntervalSelect.classList.toggle('opacity-50', disabled);
+    syncIntervalSelect.classList.toggle('cursor-not-allowed', disabled);
+  }
+
+  if (verboseLoggingToggle) {
+    const disabled = !isSignedIn;
+    verboseLoggingToggle.disabled = disabled;
+    verboseLoggingToggle.classList.toggle('opacity-50', disabled);
+    verboseLoggingToggle.classList.toggle('cursor-not-allowed', disabled);
   }
 }
 
@@ -700,11 +717,13 @@ async function renderSyncStatus() {
   const statusEl = document.getElementById('sync-status-panel');
   if (!statusEl) return;
 
-  const state = await getState();
-  const settings = await getSettings();
-  const cursors = await getCursors();
-  const pending = await getPending();
-  const history = await getHistory();
+  const [state, settings, cursors, pending, history] = await Promise.all([
+    getState(),
+    getSettings(),
+    getCursors(),
+    getPending(),
+    getHistory(),
+  ]);
 
   const last = history[0] || null;
   const failedCount = Array.isArray(pending.failedItemKeys) ? pending.failedItemKeys.length : 0;
@@ -712,11 +731,35 @@ async function renderSyncStatus() {
 
   let nextSyncText = '—';
   if (settings.autoSyncEnabled) {
-    const minutes = settings.syncIntervalMinutes || SYNC_CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES;
-    const base = last?.finishedAt ? new Date(last.finishedAt) : new Date();
-    const next = new Date(base.getTime() + minutes * 60 * 1000);
-    nextSyncText = next.toLocaleString();
+    try {
+      const alarmInfo = await chrome.runtime.sendMessage({ type: 'getAutoSyncInfo' });
+      if (alarmInfo?.ok && alarmInfo.alarmScheduledTime) {
+        nextSyncText = new Date(alarmInfo.alarmScheduledTime).toLocaleString();
+      }
+    } catch {
+      // ignore
+    }
   }
+
+  let localConversationCount = '—';
+  try {
+    const localCounts = await SyncStorage.getLocalCounts();
+    localConversationCount = String(localCounts.conversations ?? '—');
+  } catch {
+    // ignore
+  }
+
+  let cloudConversationCount = '—';
+  try {
+    const cloudCounts = await chrome.runtime.sendMessage({ type: 'getCloudCounts' });
+    if (cloudCounts?.ok && Number.isFinite(cloudCounts.conversations)) {
+      cloudConversationCount = String(cloudCounts.conversations);
+    }
+  } catch {
+    // ignore
+  }
+
+  const lastSyncedText = last?.finishedAt ? formatTimestamp(last.finishedAt) : '—';
 
   // Render status
   const statusHtml = `
@@ -730,12 +773,20 @@ async function renderSyncStatus() {
       </div>
     ` : ''}
     <div class="flex items-center justify-between mb-2">
+      <span class="text-sm">Last sync:</span>
+      <span class="text-sm">${lastSyncedText}</span>
+    </div>
+    <div class="flex items-center justify-between mb-2">
       <span class="text-sm">Auto-sync:</span>
       <span class="text-sm">${settings.autoSyncEnabled ? 'Enabled' : 'Disabled'}</span>
     </div>
     <div class="flex items-center justify-between mb-2">
       <span class="text-sm">Next sync:</span>
       <span class="text-sm">${settings.autoSyncEnabled ? nextSyncText : '—'}</span>
+    </div>
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm">Total conversations:</span>
+      <span class="text-sm">${localConversationCount} local / ${cloudConversationCount} cloud</span>
     </div>
     <div class="flex items-center justify-between mb-2">
       <span class="text-sm">Pending:</span>

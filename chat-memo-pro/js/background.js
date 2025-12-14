@@ -518,9 +518,57 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ ok: false, message: error.message });
         });
       return true;
+
+    case 'getAutoSyncInfo':
+      chrome.alarms.get(SYNC_ALARM_NAME)
+        .then((alarm) => {
+          sendResponse({
+            ok: true,
+            alarmScheduledTime: alarm?.scheduledTime || null,
+          });
+        })
+        .catch((error) => {
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'getCloudCounts':
+      SupabaseClient.countConversations()
+        .then((count) => {
+          sendResponse({ ok: true, conversations: count });
+        })
+        .catch((error) => {
+          sendResponse({ ok: false, errorCode: error.code || 'Unknown', message: error.message });
+        });
+      return true;
   }
 
   return false;
+});
+
+// React to storage changes that affect auto-sync (covers auto-disable on pause states)
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  const change = changes.cloudSync;
+  if (!change) return;
+
+  try {
+    const prevSettings = change.oldValue?.settings || {};
+    const nextSettings = change.newValue?.settings || {};
+    const prevEnabled = !!prevSettings.autoSyncEnabled;
+    const nextEnabled = !!nextSettings.autoSyncEnabled;
+
+    const prevInterval = Number(prevSettings.syncIntervalMinutes);
+    const nextInterval = Number(nextSettings.syncIntervalMinutes);
+
+    if (prevEnabled !== nextEnabled) {
+      handleUpdateAutoSync(nextEnabled).catch(() => {});
+    } else if (nextEnabled && prevInterval !== nextInterval && Number.isFinite(nextInterval)) {
+      handleUpdateSyncInterval(nextInterval).catch(() => {});
+    }
+  } catch {
+    // ignore
+  }
 });
 
 /**
@@ -1342,6 +1390,15 @@ async function initializeAutoSync() {
       await SupabaseClient.refreshToken();
     } catch (error) {
       console.log('Session refresh failed on startup (user may need to sign in again)');
+      try {
+        if (settings.autoSyncEnabled) {
+          settings.autoSyncEnabled = false;
+          await setSyncSettings(settings);
+        }
+        await clearAutoSync();
+      } catch {
+        // Best-effort only
+      }
     }
   } catch (error) {
     console.error('Failed to initialize auto-sync:', error);

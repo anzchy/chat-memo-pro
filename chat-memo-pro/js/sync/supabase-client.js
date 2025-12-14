@@ -481,6 +481,57 @@ export async function testConnection() {
 // POSTGREST API
 // ============================================================================
 
+function parseContentRangeTotal(contentRange) {
+  // Example: "0-0/123" or "*/0"
+  const value = String(contentRange || '');
+  const match = value.match(/\/(\d+)\s*$/);
+  if (!match) return null;
+  const total = parseInt(match[1], 10);
+  return Number.isFinite(total) ? total : null;
+}
+
+async function countTable(table) {
+  const config = await getConfig();
+  const { projectUrl, anonKey } = config;
+  const accessToken = await ensureValidToken();
+
+  const restUrl = `${projectUrl}/rest/v1`;
+  const url = `${restUrl}/${table}?select=id&limit=1`;
+
+  return await retryWithBackoff(async () => {
+    const response = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: {
+        ...createHeaders(anonKey, accessToken),
+        'Prefer': 'count=exact',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await buildHttpError(`Failed to count ${table}`, response);
+      error.code = mapHttpErrorToCode(response.status);
+      throw error;
+    }
+
+    const contentRange = response.headers.get('content-range');
+    const total = parseContentRangeTotal(contentRange);
+    if (total === null) {
+      const error = new Error(`Failed to count ${table}: missing content-range`);
+      error.code = SYNC_ERROR_CODE.UNKNOWN;
+      throw error;
+    }
+    return total;
+  });
+}
+
+export async function countConversations() {
+  return await countTable('conversations');
+}
+
+export async function countMessages() {
+  return await countTable('messages');
+}
+
 /**
  * Select conversations from cloud (with pagination and cursor)
  * @param {string} updatedAtCursor - Optional: only fetch conversations updated after this timestamp

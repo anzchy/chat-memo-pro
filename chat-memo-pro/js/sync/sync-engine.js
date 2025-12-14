@@ -18,6 +18,7 @@
 import { SYNC_CONFIG, SYNC_STATE, SYNC_ERROR_CODE } from './sync-config.js';
 import {
   getSettings,
+  setSettings,
   getCursors,
   setCursors,
   getState,
@@ -960,8 +961,21 @@ export async function restoreDeletedFromCloud(options = {}) {
  * @returns {Promise<void>}
  */
 async function handleSyncError(errorCode) {
+  const maybeDisableAutoSync = async () => {
+    try {
+      const settings = await getSettings();
+      if (settings && settings.autoSyncEnabled) {
+        settings.autoSyncEnabled = false;
+        await setSettings(settings);
+      }
+    } catch {
+      // Best-effort only
+    }
+  };
+
   switch (errorCode) {
     case SYNC_ERROR_CODE.AUTH_REQUIRED:
+      await maybeDisableAutoSync();
       await setState({
         status: SYNC_STATE.PAUSED_AUTH_REQUIRED,
         pausedReason: 'Session expired — please sign in again',
@@ -971,6 +985,7 @@ async function handleSyncError(errorCode) {
       break;
 
     case SYNC_ERROR_CODE.CLOUD_LIMIT:
+      await maybeDisableAutoSync();
       await setState({
         status: SYNC_STATE.PAUSED_CLOUD_LIMIT,
         pausedReason: 'Auto-sync paused — cloud limit reached',
@@ -980,6 +995,7 @@ async function handleSyncError(errorCode) {
       break;
 
     case SYNC_ERROR_CODE.LOCAL_QUOTA_EXCEEDED:
+      await maybeDisableAutoSync();
       await setState({
         status: SYNC_STATE.PAUSED_LOCAL_QUOTA,
         pausedReason: 'Sync paused — local storage is full',
@@ -989,6 +1005,7 @@ async function handleSyncError(errorCode) {
       break;
 
     case SYNC_ERROR_CODE.SCHEMA_MISMATCH:
+      await maybeDisableAutoSync();
       await setState({
         status: SYNC_STATE.PAUSED_SCHEMA_MISMATCH,
         pausedReason: 'Sync paused — cloud schema version mismatch',
