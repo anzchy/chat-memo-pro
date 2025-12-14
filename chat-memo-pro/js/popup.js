@@ -38,8 +38,10 @@ const elements = {
   // 标签页
   tabMemories: document.getElementById('tab-memories'),
   tabSettings: document.getElementById('tab-settings'),
+  tabSync: document.getElementById('tab-sync'),
   memoriesContent: document.getElementById('memories-content'),
   settingsContent: document.getElementById('settings-content'),
+  syncContent: document.getElementById('sync-content'),
   
   // 搜索相关
   searchContainer: document.getElementById('search-container'),
@@ -111,6 +113,7 @@ const elements = {
   autoSaveToggle: document.getElementById('auto-save-toggle'),
   exportBtn: document.getElementById('export-btn'),
   clearBtn: document.getElementById('clear-btn'),
+  cloudSyncSettingsBtn: document.getElementById('cloud-sync-settings-btn'),
   storageUsage: document.getElementById('storage-usage'),
   storageBar: document.getElementById('storage-bar'),
   
@@ -191,6 +194,14 @@ function registerEventListeners() {
   // 标签页切换
   elements.tabMemories.addEventListener('click', () => switchTab('memories'));
   elements.tabSettings.addEventListener('click', () => switchTab('settings'));
+  if (elements.tabSync) {
+    elements.tabSync.addEventListener('click', () => switchTab('sync'));
+  }
+
+  // Feature 002: Cloud Sync Settings entry (from Settings page)
+  if (elements.cloudSyncSettingsBtn) {
+    elements.cloudSyncSettingsBtn.addEventListener('click', () => switchTab('sync'));
+  }
 
   
   // 关闭侧边栏按钮
@@ -210,6 +221,23 @@ function registerEventListeners() {
     if (message.type === 'closeSidePanel') {
       window.close();
       sendResponse({ success: true });
+      return;
+    }
+
+    // Feature 002: Cloud Sync - open settings modal (from context menu)
+    if (message.type === 'openSyncSettings') {
+      try {
+        switchTab('sync');
+        setTimeout(() => {
+          // Ensure Sync UI controller has a chance to render latest state
+          if (window.SyncUIController && typeof window.SyncUIController.initialize === 'function') {
+            window.SyncUIController.initialize();
+          }
+        }, 50);
+        sendResponse({ success: true });
+      } catch (error) {
+        sendResponse({ success: false, error: error?.message || String(error) });
+      }
     }
   });
 
@@ -490,8 +518,8 @@ function switchTab(tabName) {
   const tabs = document.querySelectorAll('.sidebar-btn');
   const contents = document.querySelectorAll('.tab-content');
   
-  // 显示主导航和概览（从详情页返回时），但设置页面不显示概览
-  if (tabName !== 'settings') {
+  // 显示主导航和概览（从详情页返回时），但设置/同步页面不显示概览
+  if (tabName !== 'settings' && tabName !== 'sync') {
     elements.dataOverview.classList.remove('hidden');
   } else {
     elements.dataOverview.classList.add('hidden');

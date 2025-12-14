@@ -8,7 +8,8 @@
    },
    "author": "Eze & Jack",
    "background": {
-      "service_worker": "js/background.js"
+      "service_worker": "js/background.js",
+      "type": "module"
    },
    "content_scripts": [ {
       "css": [ "css/content.css" ],
@@ -44,7 +45,7 @@
    } ],
    "default_locale": "en",
    "description": "__MSG_extensionDescription__",
-   "host_permissions": [ "\u003Call_urls>" ],
+   "host_permissions": [ "\u003Call_urls>", "https://*.supabase.co/*" ],
    "icons": {
       "128": "icons/logo_128.png",
       "16": "icons/logo_16.png",
@@ -53,12 +54,12 @@
    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAre7UX2HP+oJ0kXd0OePDzr+Kr9vxCCis20eJkDFrtL+3RhQRnByyxgYUkLKbYxCB4n3QJhfhJf0BLYNnqmzeVrIVFy3RqgD8MqmjsE00N3VxlMUWlq+p/ksUelJWa2YgnoKwG+5cGtRdA/5PPVuUku/+lLq6ztKhMgHlveFLFkEX5CMBLktwcr+51qZRet4mu2V4zqTZUvHP1Vk0l+ypviM60hPbBh06YreyV8rIjtwJFYqLgwwLKpbe70G44+PRW6XBpMn4Xgz4ZBhQ6HzAP3hAe7iEvnFIebBN/O5indWxkv9zABJf+hHi+nqbS+rbfZrR7BQXCTlstK48uuhZGwIDAQAB",
    "manifest_version": 3,
    "name": "Chat Memo Pro",
-   "permissions": [ "storage", "tabs", "downloads", "sidePanel" ],
+   "permissions": [ "storage", "tabs", "downloads", "sidePanel", "alarms", "idle", "contextMenus" ],
    "side_panel": {
       "default_path": "html/popup.html"
    },
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.1.0",
+   "version": "1.3.0",
    "web_accessible_resources": [ {
       "matches": [ "\u003Call_urls>" ],
       "resources": [ "lib/*", "icons/*", "html/popup.html", "css/*", "js/popup.js" ]

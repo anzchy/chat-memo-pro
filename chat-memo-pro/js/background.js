@@ -3,6 +3,67 @@
  * 作为扩展的核心部分，负责数据库操作和消息处理
  */
 
+// ============================================================================
+// SYNC MODULE IMPORTS (Feature 002: Cloud Sync)
+// ============================================================================
+import * as SyncEngine from './sync/sync-engine.js';
+import * as SupabaseClient from './sync/supabase-client.js';
+import {
+  getSettings as getSyncSettings,
+  setSettings as setSyncSettings,
+  getState as getSyncState,
+  getAuth as getSyncAuth,
+  getPending as getSyncPending,
+  setPending as setSyncPending,
+} from './sync/sync-config.js';
+
+// Side-effect import for JSZip (background is an ES module in MV3)
+import '../lib/jszip.min.js';
+
+// ============================================================================
+// CLOUD SYNC PROGRESS PORT (Feature 002)
+// Per specs/002-cloud-sync/contracts/sync-api.md
+// ============================================================================
+
+const syncProgressPorts = new Set();
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port?.name !== 'cloudSync.progress') return;
+
+  syncProgressPorts.add(port);
+
+  port.onDisconnect.addListener(() => {
+    syncProgressPorts.delete(port);
+  });
+});
+
+function broadcastSyncProgress(event) {
+  for (const port of syncProgressPorts) {
+    try {
+      port.postMessage({ type: 'progress', event });
+    } catch {
+      // Ignore ports that can no longer receive messages
+    }
+  }
+}
+
+// Debug helpers for Service Worker DevTools
+globalThis.cloudSyncDebug = {
+  dump: async () => ({
+    settings: await getSyncSettings(),
+    state: await getSyncState(),
+    auth: await getSyncAuth(),
+    pending: await getSyncPending(),
+    alarms: await chrome.alarms.getAll(),
+  }),
+  triggerAutoNow: async () => SyncEngine.syncNow({ reason: 'auto', onProgress: (e) => broadcastSyncProgress(e) }),
+  triggerManualNow: async () => SyncEngine.syncNow({ reason: 'manual', onProgress: (e) => broadcastSyncProgress(e) }),
+};
+
+// ============================================================================
+// EXISTING CODE
+// ============================================================================
+
 // 时间处理工具函数（与 compatibility.js 中的 TimeUtils.getMessageTime 保持一致）
 function getMessageTime(message) {
   if (!message) return '';
@@ -284,9 +345,230 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: 'ok' });
       });
       return true;
+
+    // ========================================================================
+    // CLOUD SYNC MESSAGE HANDLERS (Feature 002)
+    // ========================================================================
+
+    case 'testConnection':
+      SupabaseClient.testConnection()
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Test connection failed:', error);
+          sendResponse({ ok: false, errorCode: 'Unknown', message: error.message });
+        });
+      return true;
+
+    case 'signIn':
+      SupabaseClient.signIn(message.email, message.password)
+        .then(() => {
+          // After sign-in, attempt to initialize/schedule auto-sync if enabled
+          initializeAutoSync().catch(() => {});
+          sendResponse({ ok: true });
+        })
+        .catch(error => {
+          console.error('Sign in failed:', error);
+          sendResponse({ ok: false, errorCode: error.code || 'Unknown', message: error.message });
+        });
+      return true;
+
+    case 'signOut':
+      SupabaseClient.signOut()
+        .then(async () => {
+          try {
+            const settings = await getSyncSettings();
+            if (settings.autoSyncEnabled) {
+              settings.autoSyncEnabled = false;
+              await setSyncSettings(settings);
+            }
+            await clearAutoSync();
+          } catch {
+            // Best-effort only
+          }
+          sendResponse({ ok: true });
+        })
+        .catch(error => {
+          console.error('Sign out failed:', error);
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'syncNow':
+      SyncEngine.syncNow({
+        reason: 'manual',
+        onProgress: (event) => broadcastSyncProgress(event),
+      })
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Sync now failed:', error);
+          sendResponse({ ok: false, synced: 0, failed: 0, warnings: 0, message: error.message });
+        });
+      return true;
+
+    case 'syncNowAuto':
+      SyncEngine.syncNow({
+        reason: 'auto',
+        onProgress: (event) => broadcastSyncProgress(event),
+      })
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Sync now (auto) failed:', error);
+          sendResponse({ ok: false, synced: 0, failed: 0, warnings: 0, message: error.message });
+        });
+      return true;
+
+    case 'downloadFromCloud':
+      SyncEngine.downloadFromCloud({
+        onProgress: (event) => broadcastSyncProgress(event),
+      })
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Download failed:', error);
+          sendResponse({ ok: false, synced: 0, failed: 0, warnings: 0, message: error.message });
+        });
+      return true;
+
+    case 'replaceLocal':
+      SyncEngine.replaceLocalWithCloud({
+        onProgress: (event) => broadcastSyncProgress(event),
+      })
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Replace local failed:', error);
+          sendResponse({ ok: false, synced: 0, failed: 0, warnings: 0, message: error.message });
+        });
+      return true;
+
+    case 'resetSyncState':
+      SyncEngine.resetSyncState()
+        .then(() => {
+          sendResponse({ ok: true });
+        })
+        .catch(error => {
+          console.error('Reset sync state failed:', error);
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'forceFullResync':
+      SyncEngine.forceFullResync()
+        .then(() => {
+          sendResponse({ ok: true });
+        })
+        .catch(error => {
+          console.error('Force resync failed:', error);
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'retryFailed':
+      SyncEngine.retryFailed({
+        onProgress: (event) => broadcastSyncProgress(event),
+      })
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Retry failed:', error);
+          sendResponse({ ok: false, synced: 0, failed: 0, warnings: 0, message: error.message });
+        });
+      return true;
+
+    case 'restoreDeletedFromCloud':
+      SyncEngine.restoreDeletedFromCloud({
+        onProgress: (event) => broadcastSyncProgress(event),
+      })
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Restore deleted from cloud failed:', error);
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'updateAutoSync':
+      handleUpdateAutoSync(message.enabled)
+        .then(() => {
+          sendResponse({ ok: true });
+        })
+        .catch(error => {
+          console.error('Update auto-sync failed:', error);
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'updateSyncInterval':
+      handleUpdateSyncInterval(message.minutes)
+        .then(() => {
+          sendResponse({ ok: true });
+        })
+        .catch(error => {
+          console.error('Update sync interval failed:', error);
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'getAutoSyncInfo':
+      chrome.alarms.get(SYNC_ALARM_NAME)
+        .then((alarm) => {
+          sendResponse({
+            ok: true,
+            alarmScheduledTime: alarm?.scheduledTime || null,
+          });
+        })
+        .catch((error) => {
+          sendResponse({ ok: false, message: error.message });
+        });
+      return true;
+
+    case 'getCloudCounts':
+      SupabaseClient.countConversations()
+        .then((count) => {
+          sendResponse({ ok: true, conversations: count });
+        })
+        .catch((error) => {
+          sendResponse({ ok: false, errorCode: error.code || 'Unknown', message: error.message });
+        });
+      return true;
   }
 
   return false;
+});
+
+// React to storage changes that affect auto-sync (covers auto-disable on pause states)
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  const change = changes.cloudSync;
+  if (!change) return;
+
+  try {
+    const prevSettings = change.oldValue?.settings || {};
+    const nextSettings = change.newValue?.settings || {};
+    const prevEnabled = !!prevSettings.autoSyncEnabled;
+    const nextEnabled = !!nextSettings.autoSyncEnabled;
+
+    const prevInterval = Number(prevSettings.syncIntervalMinutes);
+    const nextInterval = Number(nextSettings.syncIntervalMinutes);
+
+    if (prevEnabled !== nextEnabled) {
+      handleUpdateAutoSync(nextEnabled).catch(() => {});
+    } else if (nextEnabled && prevInterval !== nextInterval && Number.isFinite(nextInterval)) {
+      handleUpdateSyncInterval(nextInterval).catch(() => {});
+    }
+  } catch {
+    // ignore
+  }
 });
 
 /**
@@ -528,6 +810,9 @@ async function getAllConversations() {
 
 // 删除会话
 async function deleteConversation(conversationId) {
+  // Feature 002: Cloud Sync - queue tombstone before local hard delete
+  await queueCloudDeleteTombstone(conversationId);
+
   const db = await openDB();
   
   return new Promise((resolve, reject) => {
@@ -543,6 +828,47 @@ async function deleteConversation(conversationId) {
       reject(event.target.error);
     };
   });
+}
+
+// ============================================================================
+// CLOUD SYNC - TOMBSTONE DELETE PROPAGATION (Feature 002)
+// ============================================================================
+
+function getStablePlatformConversationIdForSync(conv) {
+  return conv?.syncConversationId || conv?.externalId || conv?.link || conv?.conversationId || null;
+}
+
+async function queueCloudDeleteTombstone(conversationId) {
+  try {
+    const state = await getSyncState();
+    if (!state || state.status === 'Not Configured') return;
+
+    const conv = await getConversationById(conversationId);
+    if (!conv) return;
+
+    const stableId = getStablePlatformConversationIdForSync(conv);
+    if (!stableId) return;
+
+    const deletedAt = new Date().toISOString();
+    const pending = await getSyncPending();
+    const tombstones = Array.isArray(pending.tombstones) ? pending.tombstones : [];
+
+    tombstones.push({
+      platform: conv.platform || 'unknown',
+      platformConversationId: stableId,
+      deletedAt,
+      createdAt: conv.createdAt || deletedAt,
+      title: conv.title || 'Untitled',
+      link: conv.link || '',
+    });
+
+    await setSyncPending({
+      ...pending,
+      tombstones,
+    });
+  } catch (error) {
+    console.warn('Cloud Sync: Failed to queue delete tombstone', error);
+  }
 }
 
 // 获取存储使用情况
@@ -632,13 +958,7 @@ function notifySettingsUpdated(settings) {
   });
 }
 
-// 加载JSZip库
-try {
-  importScripts('../lib/jszip.min.js');
-  console.log('JSZip库加载成功');
-} catch (error) {
-  console.error('JSZip库加载失败:', error);
-}
+// JSZip is loaded via ESM side-effect import above
 
 /**
  * 统一的导出函数 - 按指定范围导出对话
@@ -733,7 +1053,13 @@ async function exportAsSeparateFiles(conversations, metadata) {
   return new Promise((resolve) => {
     try {
       // 创建新的JSZip实例
-      const zip = new JSZip();
+      const JSZipCtor = globalThis.JSZip;
+      if (!JSZipCtor) {
+        console.error('JSZip is not available in background context');
+        resolve(null);
+        return;
+      }
+      const zip = new JSZipCtor();
       
       // 为每个会话创建文本文件
       conversations.forEach(conversation => {
@@ -1030,4 +1356,219 @@ function notifySidebarRefresh() {
   });
 }
 
+// ============================================================================
+// CLOUD SYNC AUTO-SCHEDULER (Feature 002)
+// Per specs/002-cloud-sync/contracts/background-scheduler.md
+// ============================================================================
 
+const SYNC_ALARM_NAME = 'cloudSync.autoSync';
+
+function isSignedInForCloudSync(state, auth) {
+  if (!auth || !auth.accessToken || !auth.refreshToken) return false;
+  if (state && String(state.status).startsWith('Paused (Auth Required)')) return false;
+  return true;
+}
+
+/**
+ * Initialize auto-sync on extension startup
+ */
+async function initializeAutoSync() {
+  try {
+    const [settings, state, auth] = await Promise.all([getSyncSettings(), getSyncState(), getSyncAuth()]);
+
+    console.log('Cloud Sync: initializeAutoSync', { autoSyncEnabled: settings.autoSyncEnabled, status: state.status });
+
+    // Only schedule if auto-sync is enabled and user is signed in
+    if (settings.autoSyncEnabled && isSignedInForCloudSync(state, auth)) {
+      await scheduleAutoSync(settings.syncIntervalMinutes);
+    } else {
+      await clearAutoSync();
+    }
+
+    // Try to refresh session on startup
+    try {
+      await SupabaseClient.refreshToken();
+    } catch (error) {
+      console.log('Session refresh failed on startup (user may need to sign in again)');
+      try {
+        if (settings.autoSyncEnabled) {
+          settings.autoSyncEnabled = false;
+          await setSyncSettings(settings);
+        }
+        await clearAutoSync();
+      } catch {
+        // Best-effort only
+      }
+    }
+  } catch (error) {
+    console.error('Failed to initialize auto-sync:', error);
+  }
+}
+
+/**
+ * Schedule auto-sync alarm
+ * @param {number} intervalMinutes - Sync interval in minutes
+ */
+async function scheduleAutoSync(intervalMinutes) {
+  try {
+    const minutes = Math.min(Math.max(Number(intervalMinutes) || 15, 5), 1440);
+
+    // Clear existing alarm
+    await chrome.alarms.clear(SYNC_ALARM_NAME);
+
+    // Create new alarm
+    await chrome.alarms.create(SYNC_ALARM_NAME, {
+      periodInMinutes: minutes,
+      delayInMinutes: minutes,
+    });
+
+    console.log(`Auto-sync scheduled every ${minutes} minutes`);
+  } catch (error) {
+    console.error('Failed to schedule auto-sync:', error);
+  }
+}
+
+/**
+ * Clear auto-sync alarm
+ */
+async function clearAutoSync() {
+  try {
+    await chrome.alarms.clear(SYNC_ALARM_NAME);
+    console.log('Auto-sync cleared');
+  } catch (error) {
+    console.error('Failed to clear auto-sync:', error);
+  }
+}
+
+/**
+ * Handle alarm events (auto-sync trigger)
+ */
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === SYNC_ALARM_NAME) {
+    try {
+      const settings = await getSyncSettings();
+      if (!settings.autoSyncEnabled) {
+        return;
+      }
+
+      const [state, auth] = await Promise.all([getSyncState(), getSyncAuth()]);
+      if (!isSignedInForCloudSync(state, auth)) {
+        return;
+      }
+
+      if (String(state.status).startsWith('Paused')) {
+        console.log('Skipping auto-sync: sync is paused (state:', state.status, ')');
+        return;
+      }
+
+      // Check if browser is active (not idle or locked)
+      const idleState = await chrome.idle.queryState(60); // 60 second threshold
+
+      if (idleState !== 'active') {
+        console.log('Skipping auto-sync: browser is not active (state:', idleState, ')');
+        return;
+      }
+
+      // Check if sync is already running
+      if (SyncEngine.isSyncRunning()) {
+        console.log('Skipping auto-sync: sync already in progress');
+        return;
+      }
+
+      // Run auto-sync
+      console.log('Running auto-sync...');
+      const result = await SyncEngine.syncNow({ reason: 'auto', onProgress: (event) => broadcastSyncProgress(event) });
+
+      if (result.ok) {
+        console.log(`Auto-sync completed: synced ${result.synced} items`);
+      } else {
+        console.error('Auto-sync failed:', result.errorCode, result.message);
+      }
+    } catch (error) {
+      console.error('Auto-sync error:', error);
+    }
+  }
+});
+
+/**
+ * Handle auto-sync toggle
+ * @param {boolean} enabled
+ */
+async function handleUpdateAutoSync(enabled) {
+  const [settings, state, auth] = await Promise.all([getSyncSettings(), getSyncState(), getSyncAuth()]);
+
+  if (enabled) {
+    if (!isSignedInForCloudSync(state, auth)) {
+      console.log('Cloud Sync: auto-sync enable ignored (not signed in)');
+      return;
+    }
+    // Schedule auto-sync
+    await scheduleAutoSync(settings.syncIntervalMinutes);
+  } else {
+    // Clear auto-sync
+    await clearAutoSync();
+  }
+}
+
+/**
+ * Handle sync interval change
+ * @param {number} minutes
+ */
+async function handleUpdateSyncInterval(minutes) {
+  const settings = await getSyncSettings();
+
+  // Only reschedule if auto-sync is enabled
+  if (settings.autoSyncEnabled) {
+    console.log('Cloud Sync: reschedule interval to', minutes);
+    await scheduleAutoSync(minutes);
+  }
+}
+
+/**
+ * Set up context menu for Sync Settings
+ */
+async function setupSyncContextMenu() {
+  try {
+    await chrome.contextMenus.create({
+      id: 'sync-settings',
+      title: chrome.i18n.getMessage('syncSettings') || 'Sync Settings',
+      contexts: ['action'],
+    });
+
+    console.log('Sync context menu created');
+  } catch (error) {
+    console.error('Failed to create sync context menu:', error);
+  }
+}
+
+/**
+ * Handle context menu clicks
+ */
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'sync-settings') {
+    // Open popup with sync settings
+    // The popup will be opened automatically, we just need to ensure it's visible
+    try {
+      if (tab && tab.windowId) {
+        await chrome.sidePanel.open({ windowId: tab.windowId });
+        // Send message to popup to open sync settings
+        setTimeout(() => {
+          chrome.runtime.sendMessage({ type: 'openSyncSettings' });
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Failed to open sync settings:', error);
+    }
+  }
+});
+
+// Initialize auto-sync on startup
+chrome.runtime.onStartup.addListener(async () => {
+  await initializeAutoSync();
+});
+
+// Also initialize on extension install/update
+chrome.runtime.onInstalled.addListener(async () => {
+  await setupSyncContextMenu();
+  await initializeAutoSync();
+});

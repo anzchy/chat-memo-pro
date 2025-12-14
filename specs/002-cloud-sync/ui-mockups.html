@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Memo Pro - Cloud Sync UI Mockups</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2563eb;
+        }
+
+        .mockup-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .mockup-section h2 {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            color: #1f2937;
+        }
+
+        .mockup-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .ui-frame {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 16px;
+            background: #fafafa;
+        }
+
+        .ui-frame h3 {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1f2937;
+        }
+
+        .settings-button {
+            width: 100%;
+            padding: 12px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .settings-button:hover {
+            background: #2563eb;
+        }
+
+        .settings-button.secondary {
+            background: #10b981;
+        }
+
+        .settings-button.secondary:hover {
+            background: #059669;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 40px 20px;
+            border-radius: 8px;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* Alert Box */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: start;
+            gap: 10px;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 16px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .code-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #9ca3af;
+        }
+
+        .copy-button {
+            padding: 6px 12px;
+            background: #374151;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .copy-button:hover {
+            background: #4b5563;
+        }
+
+        .copy-button.copied {
+            background: #10b981;
+        }
+
+        /* Button */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .btn-outline:hover {
+            background: #f9fafb;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.not-configured {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-badge.syncing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Sync Status */
+        .sync-status-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .sync-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .sync-stat {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .sync-stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .sync-stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 12px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            transition: width 0.3s;
+        }
+
+        /* Sync History */
+        .sync-history {
+            margin-top: 16px;
+        }
+
+        .sync-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .sync-history-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .sync-history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .sync-history-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .sync-history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sync-history-type {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .sync-history-time {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .sync-history-details {
+            font-size: 12px;
+            color: #6b7280;
+            display: flex;
+            gap: 12px;
+        }
+
+        .sync-history-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sync-history-status.success {
+            color: #059669;
+        }
+
+        .sync-history-status.failed {
+            color: #dc2626;
+        }
+
+        /* Context Menu */
+        .context-menu {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .context-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .context-menu-item:hover {
+            background: #f9fafb;
+        }
+
+        .context-menu-icon {
+            font-size: 16px;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #d1d5db;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle.active {
+            background: #3b82f6;
+        }
+
+        .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .toggle.active .toggle-knob {
+            transform: translateX(20px);
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            color: #374151;
+        }
+
+        /* Select Dropdown */
+        .select-dropdown {
+            position: relative;
+        }
+
+        .select-input {
+            width: 100%;
+            padding: 10px 36px 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+            appearance: none;
+        }
+
+        .select-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #6b7280;
+        }
+
+        /* Icon */
+        .icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Chat Memo Pro - Cloud Sync UI Mockups</h1>
+
+        <!-- 1. Settings Panel with Cloud Sync Button -->
+        <div class="mockup-section">
+            <h2>1. Settings Panel - Export Data Section</h2>
+            <div class="mockup-grid">
+                <div class="ui-frame">
+                    <h3>State: Not Configured</h3>
+                    <div class="settings-panel">
+                        <div class="settings-section">
+                            <div class="settings-section-title">Export Data</div>
+                            <button class="settings-button" style="margin-bottom: 12px;">
+                                📥 Export Conversations
+                            </button>
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="settings-section-title">Cloud Sync</div>
+                            <div class="alert alert-info">
+                                <span>ℹ️</span>
+                                <div>
+                                    <strong>Cloud sync not configured</strong><br>
+                                    <span style="font-size: 12px;">Set up sync to back up your conversations across devices</span>
+                                </div>
+                            </div>
+                            <button class="settings-button">
+                                ☁️ Cloud Sync Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>State: Connected & Syncing</h3>
+                    <div class="settings-panel">
+                        <div class="settings-section">
+                            <div class="settings-section-title">Export Data</div>
+                            <button class="settings-button" style="margin-bottom: 12px;">
+                                📥 Export Conversations
+                            </button>
+                        </div>
+
+                        <div class="settings-section">
+                            <div class="settings-section-title">Cloud Sync</div>
+                            <div class="sync-status-card">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <span class="status-badge connected">
+                                        <span class="status-dot"></span>
+                                        Connected
+                                    </span>
+                                    <span style="font-size: 12px; color: #6b7280;">
+                                        Last synced: 2 min ago
+                                    </span>
+                                </div>
+
+                                <div class="sync-stats">
+                                    <div class="sync-stat">
+                                        <div class="sync-stat-label">Local</div>
+                                        <div class="sync-stat-value">127</div>
+                                    </div>
+                                    <div class="sync-stat">
+                                        <div class="sync-stat-label">Cloud</div>
+                                        <div class="sync-stat-value">127</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="settings-button secondary">
+                                🔄 Sync Now
+                            </button>
+                            <button class="settings-button" style="margin-top: 8px;">
+                                ⚙️ Cloud Sync Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Cloud Sync Configuration Modal - Initial Setup -->
+        <div class="mockup-section">
+            <h2>2. Cloud Sync Configuration Modal - Initial Setup</h2>
+            <div class="ui-frame">
+                <h3>Step 1: Database Schema Setup</h3>
+                <div class="modal-overlay">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <div class="modal-title">☁️ Cloud Sync Settings</div>
+                            <button class="modal-close">×</button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <span>ℹ️</span>
+                                <div>
+                                    <strong>First-time setup</strong><br>
+                                    <span style="font-size: 12px;">Follow these steps to set up cloud sync with your Supabase project</span>
+                                </div>
+                            </div>
+
+                            <div style="background: #f9fafb; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
+                                <div style="font-weight: 600; margin-bottom: 8px; color: #1f2937;">
+                                    📋 Step 1: Run Database Migration
+                                </div>
+                                <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">
+                                    Copy and run this SQL in your Supabase Dashboard → SQL Editor
+                                </p>
+
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-label">migration.sql</span>
+                                        <button class="copy-button" onclick="this.textContent='✓ Copied!'; this.classList.add('copied'); setTimeout(() => {this.textContent='📋 Copy SQL'; this.classList.remove('copied')}, 2000)">
+                                            📋 Copy SQL
+                                        </button>
+                                    </div>
+                                    <pre>-- Enable Row Level Security
+CREATE TABLE conversations (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users NOT NULL,
+  platform TEXT NOT NULL,
+  platform_conversation_id TEXT NOT NULL,
+  title TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  synced_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ,
+  metadata JSONB,
+  UNIQUE(user_id, platform, platform_conversation_id)
+);
+
+CREATE TABLE messages (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users NOT NULL,
+  platform TEXT NOT NULL,
+  platform_conversation_id TEXT NOT NULL,
+  message_key TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content_text TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ,
+  metadata JSONB,
+  UNIQUE(user_id, message_key)
+);
+
+-- Row Level Security Policies
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can only access their own conversations"
+  ON conversations FOR ALL
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can only access their own messages"
+  ON messages FOR ALL
+  USING (auth.uid() = user_id);</pre>
+                                </div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <div style="font-weight: 600; margin-bottom: 12px; color: #1f2937;">
+                                🔑 Step 2: Enter Your Supabase Credentials
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Project URL</label>
+                                <input type="text" class="form-input" placeholder="https://xxxxx.supabase.co">
+                                <div class="form-hint">Found in: Settings → API → Project URL</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">API Key (anon/public)</label>
+                                <input type="password" class="form-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                                <div class="form-hint">Found in: Settings → API → anon public</div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <div style="font-weight: 600; margin-bottom: 12px; color: #1f2937;">
+                                👤 Step 3: Sign In
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-input" placeholder="your@email.com">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-input" placeholder="••••••••">
+                                <div class="form-hint">Create an account in Supabase Authentication first</div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-outline">Cancel</button>
+                            <button class="btn btn-primary">Test Connection</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Connection States -->
+        <div class="mockup-section">
+            <h2>3. Connection Test States</h2>
+            <div class="mockup-grid">
+                <div class="ui-frame">
+                    <h3>Success State</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-success">
+                            <span>✓</span>
+                            <div>
+                                <strong>Connection Successful!</strong><br>
+                                <span style="font-size: 12px;">All required tables found. Ready to sync.</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 12px;">
+                            <button class="btn btn-outline" style="flex: 1;">Cancel</button>
+                            <button class="btn btn-success" style="flex: 1;">Save & Enable Sync</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>Error: Tables Not Found</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-error">
+                            <span>✕</span>
+                            <div>
+                                <strong>Tables not found</strong><br>
+                                <span style="font-size: 12px;">Please run the SQL migration in your Supabase Dashboard first.</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 12px;">
+                            <button class="btn btn-outline" style="flex: 1;">Cancel</button>
+                            <button class="btn btn-primary" style="flex: 1;">Retry Test</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>Error: Authentication Failed</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-error">
+                            <span>✕</span>
+                            <div>
+                                <strong>Authentication failed</strong><br>
+                                <span style="font-size: 12px;">Invalid email or password. Please check your credentials.</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 12px;">
+                            <button class="btn btn-outline" style="flex: 1;">Cancel</button>
+                            <button class="btn btn-primary" style="flex: 1;">Try Again</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>Session Expired</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-warning">
+                            <span>⚠️</span>
+                            <div>
+                                <strong>Session expired</strong><br>
+                                <span style="font-size: 12px;">Please sign in again to continue syncing.</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px;">
+                            <button class="btn btn-primary" style="width: 100%;">Sign In Again</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Sync Status & Controls (Connected State) -->
+        <div class="mockup-section">
+            <h2>4. Cloud Sync Settings - Connected State</h2>
+            <div class="ui-frame">
+                <h3>Full Configuration Panel</h3>
+                <div class="modal-overlay">
+                    <div class="modal" style="max-width: 700px;">
+                        <div class="modal-header">
+                            <div class="modal-title">☁️ Cloud Sync Settings</div>
+                            <button class="modal-close">×</button>
+                        </div>
+
+                        <div class="modal-body">
+                            <!-- Connection Status -->
+                            <div class="sync-status-card" style="margin-bottom: 24px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span class="status-badge connected">
+                                            <span class="status-dot"></span>
+                                            Connected
+                                        </span>
+                                        <div style="font-size: 12px; color: #6b7280; margin-top: 6px;">
+                                            user@example.com
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline" style="font-size: 13px; padding: 8px 12px;">
+                                        🚪 Sign Out
+                                    </button>
+                                </div>
+
+                                <div class="divider"></div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                    <div>
+                                        <div class="sync-stat-label">Last Synced</div>
+                                        <div style="font-size: 14px; font-weight: 500; color: #1f2937; margin-top: 4px;">
+                                            2 min ago
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="sync-stat-label">Local</div>
+                                        <div style="font-size: 14px; font-weight: 500; color: #1f2937; margin-top: 4px;">
+                                            127 conversations
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="sync-stat-label">Cloud</div>
+                                        <div style="font-size: 14px; font-weight: 500; color: #1f2937; margin-top: 4px;">
+                                            127 conversations
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sync Controls -->
+                            <div style="margin-bottom: 24px;">
+                                <div style="font-weight: 600; margin-bottom: 12px; color: #1f2937;">
+                                    Sync Controls
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                                    <button class="btn btn-success" style="width: 100%;">
+                                        🔄 Sync Now
+                                    </button>
+                                    <button class="btn btn-outline" style="width: 100%;">
+                                        ⬇️ Download from Cloud
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Auto-Sync Settings -->
+                            <div style="margin-bottom: 24px;">
+                                <div style="font-weight: 600; margin-bottom: 12px; color: #1f2937;">
+                                    Automatic Sync
+                                </div>
+
+                                <div class="toggle-switch">
+                                    <div class="toggle active">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                    <span class="toggle-label">Enable auto-sync</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Sync Interval</label>
+                                    <div class="select-dropdown">
+                                        <select class="select-input">
+                                            <option>5 minutes</option>
+                                            <option selected>15 minutes</option>
+                                            <option>30 minutes</option>
+                                            <option>1 hour</option>
+                                            <option>Custom...</option>
+                                        </select>
+                                        <span class="select-arrow">▼</span>
+                                    </div>
+                                    <div class="form-hint">Next auto-sync in 13 minutes</div>
+                                </div>
+                            </div>
+
+                            <!-- Sync History -->
+                            <div class="sync-history">
+                                <div class="sync-history-header">
+                                    <div class="sync-history-title">Recent Sync History</div>
+                                    <button class="btn btn-outline" style="font-size: 12px; padding: 6px 10px;">
+                                        View All
+                                    </button>
+                                </div>
+
+                                <div class="sync-history-list">
+                                    <div class="sync-history-item">
+                                        <div class="sync-history-item-header">
+                                            <div class="sync-history-type">🔄 Auto-sync</div>
+                                            <div class="sync-history-time">2 min ago</div>
+                                        </div>
+                                        <div class="sync-history-details">
+                                            <span class="sync-history-status success">
+                                                ✓ Success
+                                            </span>
+                                            <span>5 conversations synced</span>
+                                            <span>Upload & Download</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="sync-history-item">
+                                        <div class="sync-history-item-header">
+                                            <div class="sync-history-type">👆 Manual sync</div>
+                                            <div class="sync-history-time">1 hour ago</div>
+                                        </div>
+                                        <div class="sync-history-details">
+                                            <span class="sync-history-status success">
+                                                ✓ Success
+                                            </span>
+                                            <span>12 conversations synced</span>
+                                            <span>Upload only</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="sync-history-item">
+                                        <div class="sync-history-item-header">
+                                            <div class="sync-history-type">⬇️ Download from cloud</div>
+                                            <div class="sync-history-time">3 hours ago</div>
+                                        </div>
+                                        <div class="sync-history-details">
+                                            <span class="sync-history-status success">
+                                                ✓ Success
+                                            </span>
+                                            <span>100 conversations downloaded</span>
+                                            <span>Download only</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="sync-history-item">
+                                        <div class="sync-history-item-header">
+                                            <div class="sync-history-type">🔄 Auto-sync</div>
+                                            <div class="sync-history-time">Yesterday</div>
+                                        </div>
+                                        <div class="sync-history-details">
+                                            <span class="sync-history-status failed">
+                                                ✕ Failed
+                                            </span>
+                                            <span>Network error - retrying...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <!-- Advanced Options -->
+                            <details style="margin-top: 16px;">
+                                <summary style="cursor: pointer; font-weight: 500; color: #6b7280; font-size: 13px;">
+                                    Advanced Options
+                                </summary>
+                                <div style="margin-top: 12px; padding: 12px; background: #f9fafb; border-radius: 6px;">
+                                    <div class="toggle-switch">
+                                        <div class="toggle">
+                                            <div class="toggle-knob"></div>
+                                        </div>
+                                        <span class="toggle-label">Verbose logging (for debugging)</span>
+                                    </div>
+
+                                    <button class="btn btn-outline" style="width: 100%; margin-top: 12px; font-size: 13px; color: #dc2626; border-color: #fca5a5;">
+                                        ⚠️ Replace Local with Cloud Data
+                                    </button>
+                                </div>
+                            </details>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-outline">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Sync Progress States -->
+        <div class="mockup-section">
+            <h2>5. Sync Progress States</h2>
+            <div class="mockup-grid">
+                <div class="ui-frame">
+                    <h3>Syncing In Progress</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="sync-status-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <span class="status-badge syncing">
+                                    <span class="status-dot"></span>
+                                    Syncing...
+                                </span>
+                            </div>
+
+                            <div class="progress-container">
+                                <div class="progress-label">
+                                    <span>Syncing conversations...</span>
+                                    <span><strong>45</strong> / 100 (45%)</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 45%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-outline" style="width: 100%; margin-top: 12px; font-size: 13px;">
+                            Cancel Sync
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>Quota Warning</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-warning">
+                            <span>⚠️</span>
+                            <div>
+                                <strong>Cloud storage: 80% of quota used</strong><br>
+                                <span style="font-size: 12px;">You're approaching your storage limit. Consider upgrading your Supabase plan.</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 12px;">
+                            <div class="progress-bar" style="height: 12px;">
+                                <div class="progress-fill" style="width: 80%; background: #f59e0b;"></div>
+                            </div>
+                            <div style="font-size: 12px; color: #6b7280; margin-top: 4px; text-align: right;">
+                                400 MB / 500 MB
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>Auto-Sync Paused</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-error">
+                            <span>⏸️</span>
+                            <div>
+                                <strong>Auto-sync paused: cloud limit reached</strong><br>
+                                <span style="font-size: 12px;">Your Supabase project has reached its quota. Upgrade or delete data to resume sync.</span>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+                            <button class="btn btn-outline" style="font-size: 13px;">
+                                View Quota
+                            </button>
+                            <button class="btn btn-primary" style="font-size: 13px;">
+                                Manage Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ui-frame">
+                    <h3>Up to Date</h3>
+                    <div style="background: white; padding: 20px; border-radius: 8px;">
+                        <div class="alert alert-success">
+                            <span>✓</span>
+                            <div>
+                                <strong>Already up to date</strong><br>
+                                <span style="font-size: 12px;">No changes to sync. All conversations are backed up.</span>
+                            </div>
+                        </div>
+
+                        <div class="sync-stats" style="margin-top: 12px;">
+                            <div class="sync-stat">
+                                <div class="sync-stat-label">Local</div>
+                                <div class="sync-stat-value">127</div>
+                            </div>
+                            <div class="sync-stat">
+                                <div class="sync-stat-label">Cloud</div>
+                                <div class="sync-stat-value">127</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Context Menu -->
+        <div class="mockup-section">
+            <h2>6. Extension Icon Context Menu</h2>
+            <div class="mockup-grid">
+                <div class="ui-frame">
+                    <h3>Right-Click Menu</h3>
+                    <div style="background: #f9fafb; padding: 40px; display: flex; justify-content: center;">
+                        <div class="context-menu">
+                            <div class="context-menu-item">
+                                <span class="context-menu-icon">🏠</span>
+                                <span>Open Chat Memo Pro</span>
+                            </div>
+                            <div class="context-menu-item">
+                                <span class="context-menu-icon">⚙️</span>
+                                <span>Settings</span>
+                            </div>
+                            <div class="context-menu-item" style="background: #f0f9ff;">
+                                <span class="context-menu-icon">☁️</span>
+                                <span>Sync Settings</span>
+                            </div>
+                            <div class="context-menu-item">
+                                <span class="context-menu-icon">📥</span>
+                                <span>Export Data</span>
+                            </div>
+                            <div class="context-menu-item">
+                                <span class="context-menu-icon">❓</span>
+                                <span>Help</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Mobile/Responsive Views -->
+        <div class="mockup-section">
+            <h2>7. Compact View (Small Screens)</h2>
+            <div class="ui-frame" style="max-width: 400px; margin: 0 auto;">
+                <h3>Mobile-Optimized Sync Settings</h3>
+                <div style="background: white; padding: 16px; border-radius: 8px;">
+                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>☁️ Cloud Sync</span>
+                        <button class="modal-close">×</button>
+                    </div>
+
+                    <div class="alert alert-success" style="margin-bottom: 16px;">
+                        <span>✓</span>
+                        <div style="font-size: 13px;">
+                            <strong>Connected</strong><br>
+                            user@example.com
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; font-size: 12px;">
+                        <div style="background: #f9fafb; padding: 10px; border-radius: 6px; text-align: center;">
+                            <div style="color: #6b7280;">Local</div>
+                            <div style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 4px;">127</div>
+                        </div>
+                        <div style="background: #f9fafb; padding: 10px; border-radius: 6px; text-align: center;">
+                            <div style="color: #6b7280;">Cloud</div>
+                            <div style="font-size: 20px; font-weight: 600; color: #1f2937; margin-top: 4px;">127</div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-success" style="width: 100%; margin-bottom: 8px;">
+                        🔄 Sync Now
+                    </button>
+
+                    <div class="toggle-switch" style="justify-content: space-between; margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px;">
+                        <span class="toggle-label" style="font-size: 13px;">Auto-sync (every 15 min)</span>
+                        <div class="toggle active">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 12px; color: #6b7280; text-align: center; margin-top: 16px;">
+                        Last synced: 2 minutes ago
+                    </div>
+
+                    <button class="btn btn-outline" style="width: 100%; margin-top: 12px; font-size: 13px;">
+                        🚪 Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Add interactivity to toggles
+        document.querySelectorAll('.toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>

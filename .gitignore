@@ -1,1 +1,22 @@
 /insidebar-ai-main
+
+# Operating System
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Chrome Extension
+.web-extension-id

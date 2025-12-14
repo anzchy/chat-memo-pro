@@ -433,14 +433,14 @@
     .sidebar {
       width: 60px;
       background-color: #ffffff;
-      border-left: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 16px 0;
       gap: 16px;
       flex-shrink: 0;
-      order: 2; /* 放在右侧 */
+      order: 0; /* 放在左侧 */
     }
     
     .sidebar-btn {
@@ -492,7 +492,7 @@
       flex-direction: column;
       height: 100vh; /* Full viewport height */
       overflow-y: auto; /* Allow vertical scrolling for main content */
-      order: 1; /* 放在左侧 */
+      order: 1;
     }
     
     /* 自定义日期选择器样式 */
@@ -1133,6 +1133,10 @@
                 <i class="fas fa-trash"></i>
               </button>
             </div>
+            <!-- Cloud Sync Settings Button (Feature 002) -->
+            <button id="cloud-sync-settings-btn" class="w-full bg-green-50 text-green-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors flex items-center justify-center">
+              <i class="fas fa-cloud mr-1.5"></i><span data-i18n="cloudSyncSettings">Cloud Sync Settings</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1176,19 +1180,174 @@
         </div>
       </div>
     </div>
+
+    <!-- Cloud Sync Settings (Feature 002) -->
+    <div id="sync-content" class="tab-content hidden flex-1 overflow-y-auto p-2">
+      <div class="bg-white rounded-lg shadow-sm p-4 mb-3">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-medium flex items-center">
+            <i class="fas fa-cloud mr-2 text-gray-500"></i><span data-i18n="cloudSyncSettings">Cloud Sync Settings</span>
+          </h3>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Setup Instructions -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="text-sm font-medium text-blue-900 mb-2"><span data-i18n="setupInstructions">Setup Instructions</span></h4>
+            <ol class="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+              <li data-i18n="setupStep1">Create a free Supabase account at supabase.com</li>
+              <li data-i18n="setupStep2">Copy the SQL schema and run it in your Supabase SQL Editor</li>
+              <li data-i18n="setupStep3">Enter your Project URL and API Key below</li>
+              <li data-i18n="setupStep4">Sign in with your Supabase Auth credentials</li>
+            </ol>
+            <button id="copy-sql-btn" class="mt-3 w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors">
+              <i class="fas fa-copy mr-2"></i><span data-i18n="copySql">Copy SQL Schema</span>
+            </button>
+          </div>
+
+          <!-- Configuration -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="projectUrl">Project URL</label>
+            <input type="text" id="project-url-input" placeholder="https://your-project.supabase.co"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="anonKey">Anon/Public API Key</label>
+            <input type="password" id="anon-key-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          </div>
+
+          <button id="save-config-btn" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700">
+            <i class="fas fa-save mr-2"></i><span data-i18n="saveConfiguration">Save Configuration</span>
+          </button>
+
+          <!-- Sign In Section -->
+          <div id="sign-in-section" class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-3"><span data-i18n="signIn">Sign In</span></h4>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1" data-i18n="email">Email</label>
+                <input type="email" id="email-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1" data-i18n="password">Password</label>
+                <input type="password" id="password-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              </div>
+              <button id="sign-in-btn" class="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700">
+                <i class="fas fa-sign-in-alt mr-2"></i><span data-i18n="signIn">Sign In</span>
+              </button>
+              <button id="test-connection-btn" class="w-full bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-yellow-700">
+                <i class="fas fa-plug mr-2"></i><span data-i18n="testConnection">Test Connection</span>
+              </button>
+              <div id="test-connection-result" class="text-sm"></div>
+            </div>
+          </div>
+
+          <!-- Sign Out Section -->
+          <div id="sign-out-section" class="hidden border-t pt-4">
+            <div class="text-xs text-gray-600 mb-2">
+              <span data-i18n="loggedInAs">Logged in as</span>: <span id="signed-in-email" class="font-medium"></span>
+            </div>
+            <button id="sign-out-btn" class="w-full bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700">
+              <i class="fas fa-sign-out-alt mr-2"></i><span data-i18n="signOut">Sign Out</span>
+            </button>
+          </div>
+
+          <!-- Sync Actions -->
+          <div id="sync-actions-section" class="hidden border-t pt-4 space-y-2">
+            <h4 class="text-sm font-medium text-gray-700 mb-3"><span data-i18n="syncActions">Sync Actions</span></h4>
+            <button id="sync-now-btn" class="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700">
+              <i class="fas fa-sync mr-2"></i><span data-i18n="syncNow">Sync Now</span>
+            </button>
+            <button id="download-from-cloud-btn" class="w-full bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">
+              <i class="fas fa-cloud-download-alt mr-2"></i><span data-i18n="downloadFromCloud">Download from Cloud</span>
+            </button>
+            <button id="replace-local-btn" class="w-full bg-orange-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-orange-700">
+              <i class="fas fa-cloud-upload-alt mr-2"></i><span data-i18n="replaceLocal">Replace Local with Cloud</span>
+            </button>
+            <div class="flex gap-2">
+              <button id="reset-sync-btn" class="flex-1 bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-yellow-700">
+                <i class="fas fa-undo mr-2"></i><span data-i18n="resetSync">Reset Sync</span>
+              </button>
+              <button id="force-resync-btn" class="flex-1 bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700">
+                <i class="fas fa-redo mr-2"></i><span data-i18n="forceResync">Force Resync</span>
+              </button>
+            </div>
+            <button id="retry-failed-btn" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700">
+              <i class="fas fa-redo mr-2"></i><span data-i18n="retryFailed">Retry Failed Items</span>
+            </button>
+            <button id="restore-deleted-btn" class="w-full bg-teal-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-teal-700">
+              <i class="fas fa-undo mr-2"></i><span data-i18n="restoreDeleted">Restore Deleted (Cloud)</span>
+            </button>
+          </div>
+
+          <!-- Auto-Sync Settings -->
+          <div class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-3"><span data-i18n="autoSync">Auto-Sync</span></h4>
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-sm text-gray-700" data-i18n="enableAutoSync">Enable Auto-Sync</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="auto-sync-toggle">
+                <div class="toggle-slider"></div>
+              </label>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1" data-i18n="syncInterval">Sync Interval</label>
+              <select id="sync-interval-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="5">5 minutes</option>
+                <option value="15" selected>15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="1440">24 hours</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Status Panel -->
+          <div class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-3"><span data-i18n="syncStatus">Sync Status</span></h4>
+            <div id="sync-status-panel" class="text-sm text-gray-600 space-y-1"></div>
+            <div id="sync-progress-indicator" class="hidden mt-2 p-2 bg-blue-50 rounded"></div>
+          </div>
+
+          <!-- Sync History -->
+          <div class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-3"><span data-i18n="syncHistory">Sync History</span></h4>
+            <div id="sync-history-list" class="text-sm text-gray-600 max-h-48 overflow-y-auto"></div>
+          </div>
+
+          <!-- Advanced Settings -->
+          <div class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-3"><span data-i18n="advanced">Advanced</span></h4>
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-gray-700" data-i18n="verboseLogging">Verbose Logging</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="verbose-logging-toggle">
+                <div class="toggle-slider"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   
   <!-- 侧边栏导航 -->
   <div class="sidebar">
+    <div class="sidebar-spacer"></div>
     <button id="tab-memories" class="sidebar-btn active">
       <i class="fas fa-brain"></i>
     </button>
     <button id="tab-settings" class="sidebar-btn">
       <i class="fas fa-cog"></i>
     </button>
+    <button id="tab-sync" class="sidebar-btn" data-i18n-title="cloudSyncSettings">
+      <i class="fas fa-cloud"></i>
+    </button>
     
     <!-- 底部联系我们按钮 -->
-    <div class="sidebar-spacer"></div>
     <button id="contact-us" class="sidebar-btn contact-btn" data-i18n-title="contactUs">
       <i class="fas fa-headset"></i>
     </button>
@@ -1327,6 +1486,8 @@
   <script src="../lib/jszip.min.js"></script>
   <script src="../lib/fuse.min.js"></script>
   <script src="../js/resizable-panel.js"></script>
+  <!-- Cloud Sync UI (Feature 002) -->
+  <script type="module" src="../js/sync/sync-ui-entry.js"></script>
   <script src="../js/popup.js"></script>
 </body>
 </html>

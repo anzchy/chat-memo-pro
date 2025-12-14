@@ -262,5 +262,101 @@
    },
    "visitSupportedPages": {
       "message": "Visit supported AI chat pages to start recording conversations"
+   },
+   "cloudSyncSettings": {
+      "message": "Cloud Sync Settings"
+   },
+   "setupInstructions": {
+      "message": "Setup Instructions"
+   },
+   "setupStep1": {
+      "message": "Create a free Supabase account at supabase.com"
+   },
+   "setupStep2": {
+      "message": "Copy the SQL schema and run it in your Supabase SQL Editor"
+   },
+   "setupStep3": {
+      "message": "Enter your Project URL and API Key below"
+   },
+   "setupStep4": {
+      "message": "Sign in with your Supabase Auth credentials"
+   },
+   "copySql": {
+      "message": "Copy SQL Schema"
+   },
+   "projectUrl": {
+      "message": "Project URL"
+   },
+   "anonKey": {
+      "message": "Anon/Public API Key"
+   },
+   "saveConfiguration": {
+      "message": "Save Configuration"
+   },
+   "signIn": {
+      "message": "Sign In"
+   },
+   "signOut": {
+      "message": "Sign Out"
+   },
+   "loggedInAs": {
+      "message": "Logged in as"
+   },
+   "email": {
+      "message": "Email"
+   },
+   "password": {
+      "message": "Password"
+   },
+   "testConnection": {
+      "message": "Test Connection"
+   },
+   "syncActions": {
+      "message": "Sync Actions"
+   },
+   "syncNow": {
+      "message": "Sync Now"
+   },
+   "downloadFromCloud": {
+      "message": "Download from Cloud"
+   },
+   "replaceLocal": {
+      "message": "Replace Local with Cloud"
+   },
+   "resetSync": {
+      "message": "Reset Sync State"
+   },
+   "forceResync": {
+      "message": "Force Full Resync"
+   },
+   "retryFailed": {
+      "message": "Retry Failed Items"
+   },
+   "restoreDeleted": {
+      "message": "Restore Deleted (Cloud)"
+   },
+   "autoSync": {
+      "message": "Auto-Sync"
+   },
+   "enableAutoSync": {
+      "message": "Enable Auto-Sync"
+   },
+   "syncInterval": {
+      "message": "Sync Interval"
+   },
+   "syncStatus": {
+      "message": "Sync Status"
+   },
+   "syncHistory": {
+      "message": "Sync History"
+   },
+   "advanced": {
+      "message": "Advanced"
+   },
+   "verboseLogging": {
+      "message": "Verbose Logging"
+   },
+   "syncSettings": {
+      "message": "Sync Settings"
    }
 }
