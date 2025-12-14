@@ -2,6 +2,8 @@
 
 A powerful Chrome extension for capturing, organizing, and exporting conversations from multiple AI chat platforms.
 
+![image-20251214091101760](https://picbox-1313243162.cos.ap-nanjing.myqcloud.com/typora/image-20251214091101760.png)
+
 ## Features
 
 ### Core Capabilities
@@ -66,274 +68,126 @@ A powerful Chrome extension for capturing, organizing, and exporting conversatio
    - Search using fuzzy matching
    - Export conversations via the wizard
    - Resize the sidebar to your preference
+   - Sync conversations to the cloud (optional)
 
+## Cloud Sync
 
+**NEW in v1.3.0**: Synchronize your conversations across devices using Supabase backend.
 
-##  **📁 如何在 Mac 本地找到存储文件**
+### Features
+- **Cross-Device Sync**: Access your conversations from any device
+- **Two-Way Sync**: Automatically syncs local changes to cloud and vice versa
+- **Auto-Sync**: Schedule automatic syncs (5-1440 minutes interval)
+- **Conflict Resolution**: Last-Write-Wins (LWW) strategy for handling conflicts
+- **Account Switch Detection**: Automatically resets sync when switching Supabase accounts
+- **Retry Mechanism**: Automatically retries failed uploads
+- **Detailed Status**: Real-time sync status, history, and progress tracking
 
+### Quick Setup
 
+1. **Create a Supabase Project**
+   - Visit [supabase.com](https://supabase.com) and create a free account
+   - Create a new project
+   - Note your Project URL and API Key (anon/public)
 
-####  **方法 1: 使用 Chrome DevTools（推荐）**
+2. **Run Database Migration**
+   - Go to SQL Editor in your Supabase dashboard
+   - Run the migration script from `specs/002-cloud-sync/supabase/migration.sql`
 
+3. **Configure Extension**
+   - Open the extension sidebar
+   - Navigate to Cloud Sync settings
+   - Enter your Project URL and API Key
+   - Sign in with your Supabase credentials
 
+4. **Start Syncing**
+   - Click "Sync Now" for manual sync
+   - Or enable "Auto-sync" for automatic synchronization
 
- 这是最简单的方法，可以直接查看和管理数据：
+### Sync Status Indicators
 
+- **Not Configured**: Cloud sync not set up yet
+- **Connected (Idle)**: Ready to sync, no sync in progress
+- **Syncing (Manual)**: User-initiated sync in progress
+- **Syncing (Auto)**: Scheduled auto-sync in progress
+- **Paused**: Sync paused due to errors (check status message)
 
+### Migration & Data Safety
 
-1. **打开扩展侧边栏**
-2. **右键点击侧边栏** → 选择 "检查" (Inspect)
-3. **在 DevTools 中**：
+See [troubleshooting-manual.md](./troubleshooting-manual.md) for:
+- Switching between Supabase accounts
+- Resolving sync conflicts
+- Debugging sync errors
+- Performance optimization tips
+- Data backup and recovery
 
-  \- 点击 **Application** 标签
 
-  \- 左侧展开 **IndexedDB**
 
-  \- 找到 KeepAIMemoryDB
+## **📁 Locating Storage Files on Mac**
 
-  \- 点击 conversations 可以查看所有对话数据
+#### **Method 1: Using Chrome DevTools (Recommended)**
 
+This is the easiest method to view and manage your data directly:
 
+1. **Open the extension sidebar**
+2. **Right-click on the sidebar** → Select "Inspect"
+3. **In DevTools**:
+   - Click the **Application** tab
+   - Expand **IndexedDB** in the left panel
+   - Find **KeepAIMemoryDB**
+   - Click **conversations** to view all conversation data
 
-####  **方法 2: 在文件系统中查找**
+#### **Method 2: Finding Files in the File System**
 
- **步骤 1: 找到扩展 ID**
+**Step 1: Find the Extension ID**
 
-1. 打开 chrome://extensions/
-2. 打开 "开发者模式"
-3. 找到 "Chat Memo Pro"，复制 **ID**（例如：gefpcelbgaofbnehfglgibacfejejflp）
+1. Open `chrome://extensions/`
+2. Enable "Developer mode"
+3. Find "Chat Memo Pro" and copy the **ID** (e.g., `gefpcelbgaofbnehfglgibacfejejflp`)
 
+**Step 2: Navigate to Storage Location**
 
+1. Open **Finder**
+2. Press `Cmd + Shift + G` (Go to Folder)
+3. Enter the following path:
 
- **步骤 2: 打开存储位置**
+   `~/Library/Application Support/Google/Chrome/Default/IndexedDB/`
 
-1. 打开 **Finder**
-2. 按 Cmd + Shift + G（前往文件夹）
-3. 输入以下路径：
+4. Find the folder: `chrome-extension_<your-extension-ID>_0.indexeddb.leveldb/`
 
- `~/Library/Application Support/Google/Chrome/Default/IndexedDB/`
+**Example Path**:
 
-4. 找到文件夹：`chrome-extension_<你的扩展ID>_0.indexeddb.leveldb/`
+`~/Library/Application Support/Google/Chrome/Default/IndexedDB/chrome-extension_gefpcelbgaofbnehfglgibacfejejflp_0.indexeddb.leveldb/`
 
+#### **Method 3: Using Terminal Commands**
 
+```bash
+# 1. View all extension IndexedDB folders
+ls -la ~/Library/Application\ Support/Google/Chrome/Default/IndexedDB/
 
- **示例路径**：
+# 2. Find folders containing "chrome-extension"
+ls ~/Library/Application\ Support/Google/Chrome/Default/IndexedDB/ | grep chrome-extension
 
-` ~/Library/Application Support/Google/Chrome/Default/IndexedDB/chrome-extension_gefpcelbgaofbnehfglgibacfejejflp_0.indexeddb.leveldb/`
+# 3. View files in a specific extension folder
+ls -lh ~/Library/Application\ Support/Google/Chrome/Default/IndexedDB/chrome-extension_<extension-ID>_0.indexeddb.leveldb/
+```
 
+#### **⚠️ Important Notes**
 
+1. **IndexedDB is Binary Format**:
+   - Files are stored in LevelDB format and cannot be opened with text editors
+   - Use Chrome DevTools to view content instead
 
-####  **方法 3: 使用终端命令**
+2. **Backup Recommendations**:
+   - Use the extension's **Export Wizard** feature to export data
+   - Supports Markdown, JSON, and Plain Text formats
+   - Safer and more readable
 
- \# 1. 查看所有扩展的 IndexedDB
+3. **To Backup the Raw Database**:
 
-` ls -la ~/Library/Application\ Support/Google/Chrome/Default/IndexedDB/`
+```bash
+# Copy the entire database folder to a backup location
+cp -r ~/Library/Application\ Support/Google/Chrome/Default/IndexedDB/chrome-extension_<extension-ID>_0.indexeddb.leveldb/ ~/Desktop/chat-memo-backup/
+```
 
 
-
- \# 2. 查找包含 "chrome-extension" 的文件夹
-
-` ls ~/Library/Application\ Support/Google/Chrome/Default/IndexedDB/ | grep chrome-extension`
-
-
-
- \# 3. 查看特定扩展的文件
-
- `ls -lh ~/Library/Application\Support/Google/Chrome/Default/IndexedDB/chrome-extension_<扩展ID>_0.indexeddb.leveldb/`
-
-
-
-####  **⚠️ 重要提示**
-
-
-
-1. **IndexedDB 是二进制格式**：
-
-  \- 文件以 LevelDB 格式存储，无法用文本编辑器直接打开
-
-  \- 推荐使用 Chrome DevTools 查看内容
-
-2. **备份建议**：
-
-  \- 使用扩展的 **Export Wizard** 功能导出数据
-
-  \- 支持 Markdown、JSON、Plain Text 格式
-
-  \- 更安全、更可读
-
-3. **如果要备份原始数据库**：
-
- \# 复制整个数据库文件夹到备份位置
-
- `cp -r ~/Library/Application Support/Google/Chrome/Default/IndexedDB/chrome-extension_<扩展ID>_0.indexeddb.leveldb/ ~/Desktop/chat-memo-backup/`
-
-
-
----
-
-# Debugging Guide
-
-This section provides instructions and a JavaScript snippet to help debug the Chat Memo Chrome extension, especially for newly added platform adapters or when auto-saving isn't working as expected.
-
-## Enabling Debugging on a Specific Page
-
-1.  **Load the Modified Extension:** Ensure the latest version of the Chat Memo extension (with any recent code changes) is loaded into your Chrome browser.
-2.  **Navigate to the Target Page:** Go to the AI chat platform page you wish to debug (e.g., Manus.im or Genspark.ai).
-3.  **Open Developer Tools:** Open your browser's Developer Tools (usually by pressing `F12`, `Ctrl+Shift+I`, or right-clicking on the page and selecting "Inspect").
-4.  **Go to the Console Tab:** Select the "Console" tab within the Developer Tools.
-5.  **Paste the Debugging Script:** Copy the entire JavaScript code block below and paste it into the console. Press `Enter` to execute.
-
-    ```javascript
-    (function() {
-        console.groupCollapsed('Chat Memo Debugger');
-    
-        const isContentScriptLoaded = typeof window.keepAIMemoryCommon !== 'undefined';
-        const AdapterInstance = window.AdapterInstance;
-    
-        if (!isContentScriptLoaded) {
-            console.warn('Chat Memo content script (content_common.js) not detected. Some debugging features may be unavailable.');
-        }
-    
-        if (!AdapterInstance || !(AdapterInstance instanceof BasePlatformAdapter)) {
-            console.error('Chat Memo adapter instance not found or not a BasePlatformAdapter. Ensure you are on a supported AI chat page, and the adapter is correctly initializing and setting `window.AdapterInstance`.');
-            console.groupEnd();
-            return;
-        }
-    
-        const globalSettings = window.keepAIMemorySettings;
-        if (!globalSettings) {
-            console.warn('`window.keepAIMemorySettings` not found. Auto-save status and settings might not be accurate. Ensure content_common.js loaded correctly.');
-        }
-    
-        console.log('Chat Memo Debugger Loaded. Type `cmDebug` to access commands.');
-    
-        const cmDebug = {
-            adapter: AdapterInstance,
-            settings: globalSettings,
-    
-            status: function() {
-                console.log('--- Chat Memo Status ---');
-                console.log('Platform:', this.adapter.platform);
-                console.log('Current URL:', window.location.href);
-                console.log('Is valid conversation URL?', this.adapter.isValidConversationUrl(window.location.href));
-                console.log('Conversation ID:', this.adapter.currentConversationId);
-                console.log('Auto-Save Enabled:', this.settings ? this.settings.autoSave : 'N/A (settings not loaded)');
-                console.log('Last Extracted Content (Manus/Genspark):', this.adapter.lastExtractedContent || 'N/A');
-                console.log('------------------------');
-            },
-    
-            getMessages: function() {
-                console.log('--- Extracted Messages ---');
-                const messages = this.adapter.extractMessages();
-                if (messages && messages.length > 0) {
-                    messages.forEach((msg, index) => {
-                        console.log(`[${index}] Role: ${msg.role}, Content: "${msg.content.substring(0, 100)}"...`);
-                    });
-                    console.log(`Total messages extracted: ${messages.length}`);
-                } else {
-                    console.warn('No messages extracted. Check adapter\'s `extractMessages` logic.');
-                }
-                return messages;
-            },
-    
-            getTitle: function() {
-                console.log('--- Extracted Title ---');
-                const title = this.adapter.extractTitle();
-                console.log('Title:', title || 'No title extracted.');
-                return title;
-            },
-    
-            forceSave: async function() {
-                console.log('--- Forcing Save Operation ---');
-                if (!this.adapter.currentConversationId) {
-                    console.warn('No conversation ID. Attempting to find or create a conversation first.');
-                    await this.adapter.findOrCreateConversation();
-                }
-                if (this.adapter.currentConversationId) {
-                    try {
-                        const result = await this.adapter.performIncrementalSave();
-                        console.log('Force save successful:', result);
-                        if (window.keepAIMemoryCommon && typeof window.keepAIMemoryCommon.showSuccessStatus === 'function') {
-                            window.keepAIMemoryCommon.showSuccessStatus();
-                        }
-                    } catch (error) {
-                        console.error('Force save failed:', error);
-                    }
-                } else {
-                    console.error('Could not obtain a conversation ID. Save failed.');
-                }
-            },
-    
-            toggleAutoSave: async function() {
-                if (!this.settings) {
-                    console.error('Cannot toggle auto-save: Global settings not loaded.');
-                    return;
-                }
-                const currentAutoSave = this.settings.autoSave;
-                const newAutoSave = !currentAutoSave;
-                console.log(`--- Toggling Auto-Save: ${currentAutoSave} -> ${newAutoSave} ---`);
-                try {
-                    this.settings.autoSave = newAutoSave;
-                    await new Promise((resolve, reject) => {
-                        chrome.runtime.sendMessage({
-                            type: 'updateSettings',
-                            settings: { autoSave: newAutoSave }
-                        }, (response) => {
-                            if (chrome.runtime.lastError) {
-                                reject(chrome.runtime.lastError);
-                            } else {
-                                resolve(response);
-                            }
-                        });
-                    });
-                    console.log(`Auto-Save is now ${newAutoSave ? 'ENABLED' : 'DISABLED'}.`);
-                    if (window.keepAIMemory && typeof window.keepAIMemory.updateSettings === 'function') {
-                        window.keepAIMemory.updateSettings(this.settings);
-                    }
-                } catch (error) {
-                    console.error('Failed to toggle auto-save:', error);
-                }
-            },
-    
-            triggerMutation: function() {
-                console.log('--- Manually triggering DOM mutation handling ---');
-                if (typeof this.adapter.handleMutation === 'function') {
-                    this.adapter.handleMutation();
-                    console.log('Mutation handler executed. Check console for further logs.');
-                } else {
-                    console.warn('`handleMutation` method not found on adapter. This feature might not be available for this adapter.');
-                }
-            },
-    
-            reinitializeAdapter: function() {
-                console.log('--- Reinitializing Adapter ---');
-                if (window.keepAIMemory && typeof window.keepAIMemory.resetInitialization === 'function') {
-                    window.keepAIMemory.resetInitialization();
-                    console.log('Content script initialization state reset.');
-                } else {
-                    console.warn('`window.keepAIMemory.resetInitialization` not found. Manual page refresh may be needed.');
-                }
-                this.adapter.start();
-                console.log('Adapter `start()` method called.');
-            }
-        };
-    
-        window.cmDebug = cmDebug;
-        console.log('`cmDebug` object is available in the console for debugging. Try `cmDebug.status()`');
-        console.groupEnd();
-    })();
-    ```
-
-## Debugging Commands
-
-Once the debugger is loaded, you can use the `cmDebug` object in the console to run various commands:
-
-*   **`cmDebug.status()`**: Displays the current state of the adapter, including the platform, current URL, conversation ID, and auto-save status.
-*   **`cmDebug.getMessages()`**: Executes the `extractMessages()` method of the active adapter and logs the messages it detects on the page. This is crucial for verifying if the adapter's selectors and parsing logic are correctly identifying chat content.
-*   **`cmDebug.getTitle()`**: Executes the `extractTitle()` method to show what title the adapter is generating for the current conversation.
-*   **`cmDebug.forceSave()`**: Manually triggers the saving process. Useful for testing the persistence flow independently of auto-save triggers.
-*   **`cmDebug.toggleAutoSave()`**: Toggles the auto-save setting on or off for the extension.
-*   **`cmDebug.triggerMutation()`**: Manually calls the adapter's `handleMutation()` method, simulating a DOM change. This helps debug the `MutationObserver` logic.
-*   **`cmDebug.reinitializeAdapter()`**: Resets and restarts the active adapter. This can be helpful if you've navigated within a Single-Page Application (SPA) and suspect the adapter hasn't re-initialized correctly.
-
-By using these commands, you can inspect the internal workings of the extension and pinpoint issues related to URL matching, message extraction, or saving mechanisms.
