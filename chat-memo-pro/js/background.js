@@ -15,6 +15,7 @@ import {
   getAuth as getSyncAuth,
   getPending as getSyncPending,
   setPending as setSyncPending,
+  TEST_ERROR_CODE,
 } from './sync/sync-config.js';
 
 // Side-effect import for JSZip (background is an ES module in MV3)
@@ -548,6 +549,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       SupabaseClient.countConversations()
         .then((count) => {
           sendResponse({ ok: true, conversations: count });
+        })
+        .catch((error) => {
+          sendResponse({ ok: false, errorCode: error.code || 'Unknown', message: error.message });
+        });
+      return true;
+
+    case 'refreshSession':
+      SupabaseClient.getValidAccessToken()
+        .then(() => {
+          sendResponse({ ok: true });
         })
         .catch((error) => {
           sendResponse({ ok: false, errorCode: error.code || 'Unknown', message: error.message });
@@ -1376,7 +1387,7 @@ function notifySidebarRefresh() {
 const SYNC_ALARM_NAME = 'cloudSync.autoSync';
 
 function isSignedInForCloudSync(state, auth) {
-  if (!auth || !auth.accessToken || !auth.refreshToken) return false;
+  if (!auth || !auth.refreshToken) return false;
   if (state && String(state.status).startsWith('Paused (Auth Required)')) return false;
   return true;
 }
@@ -1399,15 +1410,17 @@ async function initializeAutoSync() {
 
     // Try to refresh session on startup
     try {
-      await SupabaseClient.refreshToken();
+      await SupabaseClient.getValidAccessToken();
     } catch (error) {
       console.log('Session refresh failed on startup (user may need to sign in again)');
       try {
-        if (settings.autoSyncEnabled) {
+        if (error && error.code === TEST_ERROR_CODE.AUTH_REQUIRED && settings.autoSyncEnabled) {
           settings.autoSyncEnabled = false;
           await setSyncSettings(settings);
         }
-        await clearAutoSync();
+        if (error && error.code === TEST_ERROR_CODE.AUTH_REQUIRED) {
+          await clearAutoSync();
+        }
       } catch {
         // Best-effort only
       }

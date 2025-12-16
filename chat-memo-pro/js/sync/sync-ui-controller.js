@@ -50,6 +50,9 @@ export async function initialize() {
   // Set up event listeners
   setupEventListeners();
 
+  // Best-effort: refresh session on popup open so users stay signed in unless they logout.
+  await tryRefreshSessionOnLoad();
+
   // Populate fields on load (page-based UI)
   await populateFieldsFromStorage();
 
@@ -183,9 +186,20 @@ function setupEventListeners() {
 }
 
 function isSignedInState(state, auth) {
-  if (!auth || !auth.accessToken || !auth.refreshToken) return false;
+  if (!auth || !auth.refreshToken) return false;
   if (state && state.status === SYNC_STATE.PAUSED_AUTH_REQUIRED) return false;
   return true;
+}
+
+async function tryRefreshSessionOnLoad() {
+  try {
+    const auth = await getAuth();
+    if (!auth || !auth.refreshToken) return;
+
+    await chrome.runtime.sendMessage({ type: 'refreshSession' });
+  } catch {
+    // Best-effort only
+  }
 }
 
 async function updateAuthUI(state, auth) {

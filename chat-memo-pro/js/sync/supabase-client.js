@@ -7,12 +7,14 @@
  * IMPORTANT: This client must NEVER log secrets (anonKey, access tokens, refresh tokens)
  */
 
-import { SYNC_CONFIG, TEST_ERROR_CODE, SYNC_ERROR_CODE } from './sync-config.js';
+import { SYNC_CONFIG, SYNC_STATE, TEST_ERROR_CODE, SYNC_ERROR_CODE } from './sync-config.js';
 import { getConfig, getAuth, setAuth, getState, setState } from './sync-config.js';
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+let refreshTokenInFlight = null;
 
 function decodeBase64Url(base64Url) {
   const padded = String(base64Url).replace(/-/g, '+').replace(/_/g, '/')
@@ -220,63 +222,95 @@ export async function signIn(email, password) {
  * @returns {Promise<Object>} New auth session
  */
 export async function refreshToken() {
-  const config = await getConfig();
-  const auth = await getAuth();
-  const { projectUrl, anonKey } = config;
-  const { refreshToken: token } = auth;
-
-  if (!projectUrl || !anonKey || !token) {
-    const error = new Error('Auth required');
-    error.code = TEST_ERROR_CODE.AUTH_REQUIRED;
-    throw error;
+  if (refreshTokenInFlight) {
+    return await refreshTokenInFlight;
   }
 
-  const authUrl = `${projectUrl}/auth/v1/token?grant_type=refresh_token`;
+  refreshTokenInFlight = (async () => {
+    const config = await getConfig();
+    const auth = await getAuth();
+    const { projectUrl, anonKey } = config;
+    const { refreshToken: token } = auth;
 
-  try {
-    const response = await fetchWithTimeout(authUrl, {
-      method: 'POST',
-      headers: createHeaders(anonKey),
-      body: JSON.stringify({
-        refresh_token: token,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = new Error('Session expired');
+    if (!projectUrl || !anonKey || !token) {
+      const error = new Error('Auth required');
       error.code = TEST_ERROR_CODE.AUTH_REQUIRED;
-
-      // Transition to Paused (Auth Required)
-      await setState({
-        status: 'Paused (Auth Required)',
-        pausedReason: 'Session expired — please sign in again',
-        lastErrorCode: TEST_ERROR_CODE.AUTH_REQUIRED,
-        lastErrorAt: new Date().toISOString(),
-      });
-
       throw error;
     }
 
-    const data = await response.json();
+    const authUrl = `${projectUrl}/auth/v1/token?grant_type=refresh_token`;
 
-    // Update auth session
-    const newAuth = {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-      userId: data.user?.id || getUserIdFromJwt(data.access_token) || auth.userId,
-    };
+    try {
+      const response = await fetchWithTimeout(authUrl, {
+        method: 'POST',
+        headers: createHeaders(anonKey),
+        body: JSON.stringify({
+          refresh_token: token,
+        }),
+      });
 
-    await setAuth(newAuth);
+      if (!response.ok) {
+        const status = response.status;
+        const shouldPauseForAuth = status === 400 || status === 401 || status === 403;
 
-    return newAuth;
-  } catch (error) {
-    if (error.code === 'TIMEOUT') {
-      error.code = TEST_ERROR_CODE.TIMEOUT;
-    } else if (!error.code) {
-      error.code = TEST_ERROR_CODE.AUTH_REQUIRED;
+        const error = await buildHttpError('Failed to refresh session', response);
+        error.code = shouldPauseForAuth ? TEST_ERROR_CODE.AUTH_REQUIRED : TEST_ERROR_CODE.NETWORK_ERROR;
+
+        if (shouldPauseForAuth) {
+          // Transition to Paused (Auth Required)
+          await setState({
+            status: SYNC_STATE.PAUSED_AUTH_REQUIRED,
+            pausedReason: 'Session expired — please sign in again',
+            lastErrorCode: TEST_ERROR_CODE.AUTH_REQUIRED,
+            lastErrorAt: new Date().toISOString(),
+          });
+        }
+
+        throw error;
+      }
+
+      const data = await response.json();
+
+      // Update auth session
+      const newAuth = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+        userId: data.user?.id || getUserIdFromJwt(data.access_token) || auth.userId,
+      };
+
+      await setAuth(newAuth);
+
+      // If we were previously paused due to auth, clear the pause on successful refresh.
+      try {
+        const state = await getState();
+        if (state && String(state.status).startsWith(SYNC_STATE.PAUSED_AUTH_REQUIRED)) {
+          await setState({
+            status: SYNC_STATE.CONNECTED_IDLE,
+            pausedReason: undefined,
+            lastErrorCode: undefined,
+            lastErrorAt: undefined,
+          });
+        }
+      } catch {
+        // Best-effort only
+      }
+
+      return newAuth;
+    } catch (error) {
+      if (error.code === 'TIMEOUT') {
+        error.code = TEST_ERROR_CODE.TIMEOUT;
+      } else if (!error.code) {
+        error.code = TEST_ERROR_CODE.NETWORK_ERROR;
+      }
+      throw error;
     }
-    throw error;
+  })();
+
+  try {
+    return await refreshTokenInFlight;
+  } finally {
+    refreshTokenInFlight = null;
   }
 }
 
@@ -319,10 +353,16 @@ export async function signOut() {
 async function ensureValidToken() {
   const auth = await getAuth();
 
-  if (!auth.accessToken || !auth.expiresAt) {
+  if (!auth.refreshToken) {
     const error = new Error('Auth required');
     error.code = TEST_ERROR_CODE.AUTH_REQUIRED;
     throw error;
+  }
+
+  // If we have a refresh token but missing access token metadata, attempt recovery.
+  if (!auth.accessToken || !auth.expiresAt) {
+    const newAuth = await refreshToken();
+    return newAuth.accessToken;
   }
 
   // Check if token is expired or will expire in next 60 seconds
@@ -337,6 +377,31 @@ async function ensureValidToken() {
   }
 
   return auth.accessToken;
+}
+
+/**
+ * Get a valid access token (refresh if needed)
+ * @returns {Promise<string>} Valid access token
+ */
+export async function getValidAccessToken() {
+  const accessToken = await ensureValidToken();
+
+  // If a previous operation incorrectly paused auth, clear it once we can obtain a valid token.
+  try {
+    const state = await getState();
+    if (state && String(state.status).startsWith(SYNC_STATE.PAUSED_AUTH_REQUIRED)) {
+      await setState({
+        status: SYNC_STATE.CONNECTED_IDLE,
+        pausedReason: undefined,
+        lastErrorCode: undefined,
+        lastErrorAt: undefined,
+      });
+    }
+  } catch {
+    // Best-effort only
+  }
+
+  return accessToken;
 }
 
 // ============================================================================

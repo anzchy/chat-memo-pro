@@ -100,8 +100,8 @@ export async function syncNow(options = {}) {
     const syncingState = reason === 'manual' ? SYNC_STATE.SYNCING_MANUAL : SYNC_STATE.SYNCING_AUTO;
     await setState({ status: syncingState });
 
-    // Step 1: Refresh token if needed
-    await SupabaseClient.refreshToken();
+    // Step 1: Ensure token is valid (refresh if needed)
+    await SupabaseClient.getValidAccessToken();
 
     // Step 1.5: Detect account/project switch and reset cursors if changed
     const auth = await getAuth();
@@ -820,7 +820,7 @@ export async function retryFailed(options = {}) {
       return { ok: true, direction: 'upload', synced: 0, failed: 0, warnings: 0 };
     }
 
-    await SupabaseClient.refreshToken();
+    await SupabaseClient.getValidAccessToken();
 
     const items = await SyncStorage.exportLocalItemsByKeys(failedItemKeys);
     const stillFailed = [];
@@ -973,7 +973,7 @@ export async function restoreDeletedFromCloud(options = {}) {
 
   try {
     await setState({ status: SYNC_STATE.SYNCING_MANUAL });
-    await SupabaseClient.refreshToken();
+    await SupabaseClient.getValidAccessToken();
 
     await SupabaseClient.restoreDeletedConversations();
 
